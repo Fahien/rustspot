@@ -1,0 +1,13 @@
+[package]
+name = "rustspot"
+version = "0.1.0"
+authors = ["Antonio Caggiano <info@antoniocaggiano.eu>"]
+edition = "2018"
+
+[profile.dev.package."*"]
+opt-level = 3
+
+[dependencies]
+drm-sys = "0.0.9"
+gl = "0.14.0"
+go2 = { path = "../libgo2-rs" }

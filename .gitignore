@@ -1,0 +1,11 @@
+target
+res/img
+res/doc
+res/model
+gen
+.vscode
+imgui.ini
+SDL2.*
+src/rustspot/shaders.rs
+.DS_store
+gen
