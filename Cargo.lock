@@ -70,6 +70,7 @@ dependencies = [
  "drm-sys",
  "gl",
  "go2",
+ "libc",
 ]
 
 [[package]]
