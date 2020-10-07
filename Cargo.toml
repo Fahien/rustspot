@@ -8,6 +8,7 @@ edition = "2018"
 opt-level = 3
 
 [dependencies]
+libc = "0.2.79"
 drm-sys = "0.0.9"
 gl = "0.14.0"
 go2 = { path = "../libgo2-rs" }
