@@ -40,15 +40,19 @@ fn main() {
     // Shaders
     let vert_src = r#"#version 320 es
         layout (location = 0) in vec3 in_pos;
+        layout (location = 1) in vec3 in_color;
+        out vec3 color;
         void main() {
+            color = in_color;
             gl_Position = vec4(in_pos, 1.0);
         }
     "#;
 
     let frag_src = r#"#version 320 es
         out mediump vec4 out_color;
+        in mediump vec3 color;
         void main() {
-            out_color = vec4(0.5, 0.1, 0.2, 1.0);
+            out_color = vec4(color, 1.0);
         }
     "#;
 
@@ -57,8 +61,23 @@ fn main() {
     let program = ShaderProgram::new(vert, frag);
 
     // Create a mesh with two triangles
-    let vertices: Vec<f32> = vec![
-        0.5, 0.5, 0.0, 0.5, -0.5, 0.0, -0.5, -0.5, 0.0, -0.5, 0.5, 0.0,
+    let vertices: Vec<Vertex> = vec![
+        Vertex {
+            position: [0.5, 0.5, 0.0],
+            color: [0.0, 0.0, 0.0],
+        },
+        Vertex {
+            position: [0.5, -0.5, 0.0],
+            color: [1.0, 0.0, 0.0],
+        },
+        Vertex {
+            position: [-0.5, -0.5, 0.0],
+            color: [1.0, 1.0, 0.0],
+        },
+        Vertex {
+            position: [-0.5, 0.5, 0.0],
+            color: [1.0, 1.0, 1.0],
+        },
     ];
     let indices: Vec<u32> = vec![0, 1, 3, 1, 2, 3];
     let mesh = MeshRes::new(&vertices, &indices);

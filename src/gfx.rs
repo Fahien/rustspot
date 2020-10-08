@@ -64,6 +64,11 @@ impl ShaderProgram {
     }
 }
 
+pub struct Vertex {
+    pub position: [f32; 3],
+    pub color: [f32; 3],
+}
+
 struct Vbo {
     handle: u32,
 }
@@ -79,11 +84,11 @@ impl Vbo {
         unsafe { gl::BindBuffer(gl::ARRAY_BUFFER, self.handle) };
     }
 
-    fn upload(&self, vertices: &Vec<f32>) {
+    fn upload<T>(&self, vertices: &Vec<T>) {
         unsafe {
             gl::BufferData(
                 gl::ARRAY_BUFFER,
-                (vertices.len() * std::mem::size_of::<f32>()) as isize,
+                (vertices.len() * std::mem::size_of::<T>()) as isize,
                 vertices.as_ptr() as *const libc::c_void,
                 gl::STATIC_DRAW,
             )
@@ -141,7 +146,7 @@ pub struct MeshRes {
 }
 
 impl MeshRes {
-    pub fn new(vertices: &Vec<f32>, indices: &Vec<u32>) -> Self {
+    pub fn new<T>(vertices: &Vec<T>, indices: &Vec<u32>) -> Self {
         let vbo = Vbo::new();
         let ebo = Ebo::new();
         let vao = Vao::new();
@@ -160,10 +165,21 @@ impl MeshRes {
                 3,
                 gl::FLOAT,
                 gl::FALSE,
-                3 * std::mem::size_of::<f32>() as i32,
+                6 * std::mem::size_of::<f32>() as i32,
                 0 as *const std::ffi::c_void,
             );
             gl::EnableVertexAttribArray(0);
+
+            // Color
+            gl::VertexAttribPointer(
+                1,
+                3,
+                gl::FLOAT,
+                gl::FALSE,
+                6 * std::mem::size_of::<f32>() as i32,
+                (3 * std::mem::size_of::<f32>()) as *const std::ffi::c_void,
+            );
+            gl::EnableVertexAttribArray(1 as u32);
         }
 
         Self {
