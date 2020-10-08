@@ -5,10 +5,10 @@ pub struct Shader {
 }
 
 impl Shader {
-    pub fn new(shader_type: gl::types::GLenum, src: &str) -> Option<Shader> {
+    pub fn new(shader_type: gl::types::GLenum, src: &[u8]) -> Option<Shader> {
         unsafe {
             let handle = gl::CreateShader(shader_type);
-            let c_src = CString::new(src.as_bytes()).unwrap();
+            let c_src = CString::new(src).unwrap();
             gl::ShaderSource(handle, 1, &c_src.as_ptr(), std::ptr::null());
             gl::CompileShader(handle);
 

@@ -3,6 +3,8 @@
 // SPDX-License-Identifier: MIT
 
 use std::ffi::CString;
+use std::fs::File;
+use std::io::Read;
 use std::time::Instant;
 
 use go2::*;
@@ -38,27 +40,7 @@ fn main() {
     };
 
     // Shaders
-    let vert_src = r#"#version 320 es
-        layout (location = 0) in vec3 in_pos;
-        layout (location = 1) in vec3 in_color;
-        out vec3 color;
-        void main() {
-            color = in_color;
-            gl_Position = vec4(in_pos, 1.0);
-        }
-    "#;
-
-    let frag_src = r#"#version 320 es
-        out mediump vec4 out_color;
-        in mediump vec3 color;
-        void main() {
-            out_color = vec4(color, 1.0);
-        }
-    "#;
-
-    let vert = Shader::new(gl::VERTEX_SHADER, vert_src).expect("Failed creating shader");
-    let frag = Shader::new(gl::FRAGMENT_SHADER, frag_src).expect("Failed creating shader");
-    let program = ShaderProgram::new(vert, frag);
+    let program = create_program("vert.glsl", "frag.glsl");
 
     // Create a mesh with two triangles
     let vertices: Vec<Vertex> = vec![
@@ -121,4 +103,22 @@ fn main() {
         context.surface_unlock(surface);
         std::thread::sleep(std::time::Duration::from_millis(15));
     }
+}
+
+fn create_program(vert_path: &str, frag_path: &str) -> ShaderProgram {
+    let mut vert_src = Vec::<u8>::new();
+    let mut frag_src = Vec::<u8>::new();
+    File::open(format!("res/shader/{}", vert_path))
+        .expect("Failed to open vertex file")
+        .read_to_end(&mut vert_src)
+        .expect("Failed reading vertex file");
+    File::open(format!("res/shader/{}", frag_path))
+        .expect("Failed to open fragment file")
+        .read_to_end(&mut frag_src)
+        .expect("Failed reading fragment file");
+
+    let vert = Shader::new(gl::VERTEX_SHADER, &vert_src).expect("Failed creating shader");
+    let frag = Shader::new(gl::FRAGMENT_SHADER, &frag_src).expect("Failed creating shader");
+
+    ShaderProgram::new(vert, frag)
 }
