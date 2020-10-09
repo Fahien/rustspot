@@ -64,9 +64,57 @@ impl ShaderProgram {
     }
 }
 
+impl Drop for ShaderProgram {
+    fn drop(&mut self) {
+        unsafe { gl::DeleteProgram(self.handle) };
+    }
+}
+
 pub struct Vertex {
     pub position: [f32; 3],
     pub color: [f32; 3],
+    pub tex_coords: [f32; 2],
+}
+
+pub struct Texture {
+    handle: u32,
+}
+
+impl Texture {
+    pub fn new() -> Texture {
+        let mut handle: u32 = 0;
+        unsafe { gl::GenTextures(1, &mut handle) };
+        Texture { handle }
+    }
+
+    pub fn bind(&self) {
+        unsafe { gl::BindTexture(gl::TEXTURE_2D, self.handle) };
+    }
+
+    pub fn upload<T>(&self, width: u32, height: u32, data: &[T]) {
+        unsafe {
+            gl::TexImage2D(
+                gl::TEXTURE_2D,
+                0,
+                gl::SRGB as i32,
+                width as i32,
+                height as i32,
+                0,
+                gl::SRGB,
+                gl::UNSIGNED_BYTE,
+                &data[0] as *const T as *const libc::c_void,
+            );
+            gl::GenerateMipmap(gl::TEXTURE_2D);
+        };
+    }
+}
+
+impl Drop for Texture {
+    fn drop(&mut self) {
+        unsafe {
+            gl::DeleteTextures(1, &self.handle);
+        }
+    }
 }
 
 struct Vbo {
@@ -93,6 +141,14 @@ impl Vbo {
                 gl::STATIC_DRAW,
             )
         };
+    }
+}
+
+impl Drop for Vbo {
+    fn drop(&mut self) {
+        unsafe {
+            gl::DeleteBuffers(1, &self.handle);
+        }
     }
 }
 
@@ -123,6 +179,14 @@ impl Ebo {
     }
 }
 
+impl Drop for Ebo {
+    fn drop(&mut self) {
+        unsafe {
+            gl::DeleteBuffers(1, &self.handle);
+        }
+    }
+}
+
 struct Vao {
     handle: u32,
 }
@@ -136,6 +200,14 @@ impl Vao {
 
     fn bind(&self) {
         unsafe { gl::BindVertexArray(self.handle) };
+    }
+}
+
+impl Drop for Vao {
+    fn drop(&mut self) {
+        unsafe {
+            gl::DeleteVertexArrays(1, &self.handle);
+        }
     }
 }
 
@@ -165,7 +237,7 @@ impl MeshRes {
                 3,
                 gl::FLOAT,
                 gl::FALSE,
-                6 * std::mem::size_of::<f32>() as i32,
+                8 * std::mem::size_of::<f32>() as i32,
                 0 as *const std::ffi::c_void,
             );
             gl::EnableVertexAttribArray(0);
@@ -176,10 +248,21 @@ impl MeshRes {
                 3,
                 gl::FLOAT,
                 gl::FALSE,
-                6 * std::mem::size_of::<f32>() as i32,
+                8 * std::mem::size_of::<f32>() as i32,
                 (3 * std::mem::size_of::<f32>()) as *const std::ffi::c_void,
             );
-            gl::EnableVertexAttribArray(1 as u32);
+            gl::EnableVertexAttribArray(1);
+
+            // Texture coordinates
+            gl::VertexAttribPointer(
+                2,
+                2,
+                gl::FLOAT,
+                gl::FALSE,
+                8 * std::mem::size_of::<f32>() as i32,
+                (6 * std::mem::size_of::<f32>()) as *const std::ffi::c_void,
+            );
+            gl::EnableVertexAttribArray(2)
         }
 
         Self {
