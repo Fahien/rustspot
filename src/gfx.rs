@@ -1,5 +1,7 @@
 use std::ffi::CString;
 
+use nalgebra as na;
+
 pub struct Shader {
     handle: u32,
 }
@@ -274,5 +276,30 @@ impl MeshRes {
 
     pub fn bind(&self) {
         self.vao.bind();
+    }
+}
+
+pub struct Node {
+    pub name: String,
+    pub model: na::Isometry3<f32>,
+}
+
+impl Node {
+    pub fn new() -> Self {
+        Node {
+            name: String::new(),
+            model: na::Isometry3::identity(),
+        }
+    }
+
+    pub fn bind(&self) {
+        unsafe {
+            gl::UniformMatrix4fv(
+                0, // model location
+                1,
+                gl::FALSE,
+                self.model.to_homogeneous().as_ptr(),
+            );
+        }
     }
 }
