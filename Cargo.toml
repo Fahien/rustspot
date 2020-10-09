@@ -11,4 +11,5 @@ opt-level = 3
 libc = "0.2.79"
 drm-sys = "0.0.9"
 gl = "0.14.0"
+png = "0.16.7"
 go2 = { path = "../libgo2-rs" }
