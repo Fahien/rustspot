@@ -47,22 +47,30 @@ fn main() {
         Vertex {
             position: [0.5, 0.5, 0.0],
             color: [0.0, 0.0, 0.0],
+            tex_coords: [1.0, 0.0],
         },
         Vertex {
             position: [0.5, -0.5, 0.0],
             color: [1.0, 0.0, 0.0],
+            tex_coords: [1.0, 1.0],
         },
         Vertex {
             position: [-0.5, -0.5, 0.0],
             color: [1.0, 1.0, 0.0],
+            tex_coords: [0.0, 1.0],
         },
         Vertex {
             position: [-0.5, 0.5, 0.0],
             color: [1.0, 1.0, 1.0],
+            tex_coords: [0.0, 0.0],
         },
     ];
     let indices: Vec<u32> = vec![0, 1, 3, 1, 2, 3];
+
     let mesh = MeshRes::new(&vertices, &indices);
+
+    // Use texture as a material for the mesh
+    let texture = get_texture("res/img/fahien.png");
 
     let mut step = 0.5;
     let mut prev = Instant::now();
@@ -88,6 +96,7 @@ fn main() {
 
             program.enable();
             mesh.bind();
+            texture.bind();
             gl::DrawElements(
                 gl::TRIANGLES,
                 indices.len() as gl::types::GLsizei,
@@ -121,4 +130,27 @@ fn create_program(vert_path: &str, frag_path: &str) -> ShaderProgram {
     let frag = Shader::new(gl::FRAGMENT_SHADER, &frag_src).expect("Failed creating shader");
 
     ShaderProgram::new(vert, frag)
+}
+
+/// Loads a PNG image from a path and returns a new texture
+fn get_texture(path: &str) -> Texture {
+    let decoder = png::Decoder::new(File::open(path).expect("Failed to open png"));
+    let (info, mut reader) = decoder.read_info().expect("Failed reading png info");
+    println!("Png {}\n{:?}", path, info);
+    let mut data: Vec<u8> = vec![0; info.buffer_size()];
+    reader
+        .next_frame(data.as_mut_slice())
+        .expect("Failed to read png frame");
+
+    let texture = Texture::new();
+    texture.bind();
+    texture.upload(info.width, info.height, &data);
+    unsafe {
+        gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_WRAP_S, gl::REPEAT as i32);
+        gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_WRAP_T, gl::REPEAT as i32);
+        gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MIN_FILTER, gl::LINEAR as i32);
+        gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MAG_FILTER, gl::LINEAR as i32);
+    }
+
+    texture
 }
