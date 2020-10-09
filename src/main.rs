@@ -8,6 +8,7 @@ use std::io::Read;
 use std::time::Instant;
 
 use go2::*;
+use nalgebra as na;
 
 mod gfx;
 use gfx::*;
@@ -77,6 +78,8 @@ fn main() {
 
     let mut red = 0.0;
 
+    let mut node = Node::new();
+
     loop {
         // Calculate delta time
         let now = Instant::now();
@@ -89,12 +92,17 @@ fn main() {
             step = -step;
         }
 
+        let rot = na::UnitQuaternion::from_axis_angle(&na::Vector3::y_axis(), delta.as_secs_f32());
+        node.model.append_rotation_mut(&rot);
+
         // Render something
         unsafe {
             gl::ClearColor(red, 0.5, 1.0, 0.0);
             gl::Clear(gl::COLOR_BUFFER_BIT | gl::DEPTH_BUFFER_BIT);
 
             program.enable();
+
+            node.bind();
             mesh.bind();
             texture.bind();
             gl::DrawElements(
