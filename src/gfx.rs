@@ -327,6 +327,47 @@ impl MeshRes {
     }
 }
 
+/// A node can refer to a camera to apply a transform to place it in the scene
+pub struct Camera {
+    proj: na::Matrix4<f32>,
+}
+
+impl Camera {
+    pub fn orthogonal() -> Camera {
+        let (w, h) = (4.8, 3.2);
+        let proj = na::Orthographic3::new(-w / 2.0, w / 2.0, -h / 2.0, h / 2.0, 0.1, 100.0);
+        Camera {
+            proj: proj.to_homogeneous(),
+        }
+    }
+
+    pub fn perspective() -> Camera {
+        let (w, h) = (480.0, 320.0);
+        let proj = na::Perspective3::new(w / h, 3.14 / 4.0, 0.1, 100.0);
+        Camera {
+            proj: proj.to_homogeneous(),
+        }
+    }
+
+    pub fn bind(&self, view: &Node) {
+        unsafe {
+            gl::UniformMatrix4fv(
+                1, // view location
+                1,
+                gl::FALSE,
+                view.model.inverse().to_homogeneous().as_ptr(),
+            );
+
+            gl::UniformMatrix4fv(
+                2, // proj location
+                1,
+                gl::FALSE,
+                self.proj.as_ptr(),
+            );
+        }
+    }
+}
+
 pub struct Node {
     pub name: String,
     pub model: na::Isometry3<f32>,
