@@ -43,32 +43,9 @@ fn main() {
     // Shaders
     let program = create_program("vert.glsl", "frag.glsl");
 
-    // Create a mesh with two triangles
-    let vertices: Vec<Vertex> = vec![
-        Vertex {
-            position: [0.5, 0.5, 0.0],
-            color: [0.0, 0.0, 0.0],
-            tex_coords: [1.0, 0.0],
-        },
-        Vertex {
-            position: [0.5, -0.5, 0.0],
-            color: [1.0, 0.0, 0.0],
-            tex_coords: [1.0, 1.0],
-        },
-        Vertex {
-            position: [-0.5, -0.5, 0.0],
-            color: [1.0, 1.0, 0.0],
-            tex_coords: [0.0, 1.0],
-        },
-        Vertex {
-            position: [-0.5, 0.5, 0.0],
-            color: [1.0, 1.0, 1.0],
-            tex_coords: [0.0, 0.0],
-        },
-    ];
-    let indices: Vec<u32> = vec![0, 1, 3, 1, 2, 3];
-
-    let mesh = MeshRes::new(&vertices, &indices);
+    // Create a primitive quad
+    let primitive = Primitive::quad();
+    let mesh = MeshRes::new(&primitive);
 
     // Use texture as a material for the mesh
     let texture = get_texture("res/img/fahien.png");
@@ -105,12 +82,7 @@ fn main() {
             node.bind();
             mesh.bind();
             texture.bind();
-            gl::DrawElements(
-                gl::TRIANGLES,
-                indices.len() as gl::types::GLsizei,
-                gl::UNSIGNED_INT,
-                0 as *const std::ffi::c_void,
-            );
+            primitive.draw();
         }
 
         // Present to the screen
