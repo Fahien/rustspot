@@ -213,6 +213,54 @@ impl Drop for Vao {
     }
 }
 
+/// Geometry to be rendered with a given material
+pub struct Primitive {
+    vertices: Vec<Vertex>,
+    indices: Vec<u32>,
+}
+
+impl Primitive {
+    /// Returns a new primitive quad with side length 1 centered at the origin
+    pub fn quad() -> Self {
+        let vertices = vec![
+            Vertex {
+                position: [-0.5, -0.5, 0.0],
+                color: [1.0, 1.0, 1.0],
+                tex_coords: [0.0, 0.0],
+            },
+            Vertex {
+                position: [0.5, -0.5, 0.0],
+                color: [1.0, 1.0, 1.0],
+                tex_coords: [1.0, 0.0],
+            },
+            Vertex {
+                position: [0.5, 0.5, 0.0],
+                color: [1.0, 1.0, 1.0],
+                tex_coords: [1.0, 1.0],
+            },
+            Vertex {
+                position: [-0.5, 0.5, 0.0],
+                color: [1.0, 1.0, 1.0],
+                tex_coords: [0.0, 1.0],
+            },
+        ];
+        let indices = vec![0, 1, 2, 2, 3, 0];
+
+        Self { vertices, indices }
+    }
+
+    pub fn draw(&self) {
+        unsafe {
+            gl::DrawElements(
+                gl::TRIANGLES,
+                self.indices.len() as _,
+                gl::UNSIGNED_INT,
+                0 as _,
+            );
+        }
+    }
+}
+
 pub struct MeshRes {
     _vbo: Vbo,
     _ebo: Ebo,
@@ -220,16 +268,16 @@ pub struct MeshRes {
 }
 
 impl MeshRes {
-    pub fn new<T>(vertices: &Vec<T>, indices: &Vec<u32>) -> Self {
+    pub fn new(primitive: &Primitive) -> Self {
         let vbo = Vbo::new();
         let ebo = Ebo::new();
         let vao = Vao::new();
 
         vao.bind();
         vbo.bind();
-        vbo.upload(&vertices);
+        vbo.upload(&primitive.vertices);
         ebo.bind();
-        ebo.upload(&indices);
+        ebo.upload(&primitive.indices);
 
         // These should follow Vao, Vbo, Ebo
         unsafe {
@@ -240,7 +288,7 @@ impl MeshRes {
                 gl::FLOAT,
                 gl::FALSE,
                 8 * std::mem::size_of::<f32>() as i32,
-                0 as *const std::ffi::c_void,
+                0 as _,
             );
             gl::EnableVertexAttribArray(0);
 
@@ -251,7 +299,7 @@ impl MeshRes {
                 gl::FLOAT,
                 gl::FALSE,
                 8 * std::mem::size_of::<f32>() as i32,
-                (3 * std::mem::size_of::<f32>()) as *const std::ffi::c_void,
+                (3 * std::mem::size_of::<f32>()) as _,
             );
             gl::EnableVertexAttribArray(1);
 
@@ -262,7 +310,7 @@ impl MeshRes {
                 gl::FLOAT,
                 gl::FALSE,
                 8 * std::mem::size_of::<f32>() as i32,
-                (6 * std::mem::size_of::<f32>()) as *const std::ffi::c_void,
+                (6 * std::mem::size_of::<f32>()) as _,
             );
             gl::EnableVertexAttribArray(2)
         }
