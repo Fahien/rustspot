@@ -50,6 +50,12 @@ fn main() {
     // Use texture as a material for the mesh
     let texture = get_texture("res/img/fahien.png");
 
+    let camera = Camera::perspective();
+    let mut camera_node = Node::new();
+    camera_node
+        .model
+        .append_translation_mut(&na::Translation3::new(0.0, 0.0, -1.0));
+
     let mut step = 0.5;
     let mut prev = Instant::now();
 
@@ -79,6 +85,7 @@ fn main() {
 
             program.enable();
 
+            camera.bind(&camera_node);
             node.bind();
             mesh.bind();
             texture.bind();
