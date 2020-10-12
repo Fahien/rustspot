@@ -45,7 +45,6 @@ fn main() {
 
     // Create a primitive quad
     let primitive = Primitive::quad();
-    let mesh = MeshRes::new(&primitive);
 
     // Use texture as a material for the mesh
     let texture = get_texture("res/img/fahien.png");
@@ -87,7 +86,7 @@ fn main() {
 
             camera.bind(&camera_node);
             node.bind();
-            mesh.bind();
+            primitive.bind();
             texture.bind();
             primitive.draw();
         }

@@ -217,6 +217,11 @@ impl Drop for Vao {
 pub struct Primitive {
     vertices: Vec<Vertex>,
     indices: Vec<u32>,
+
+    // Res could be computed on the fly, but we would need to hash both vertices and indices,
+    // therefore we store it here and it is responsibility of the scene builder to avoid an
+    // explosion of primitive resources at run-time.
+    res: MeshRes,
 }
 
 impl Primitive {
@@ -246,7 +251,17 @@ impl Primitive {
         ];
         let indices = vec![0, 1, 2, 2, 3, 0];
 
-        Self { vertices, indices }
+        let res = MeshRes::new(&vertices, &indices);
+
+        Self {
+            vertices,
+            indices,
+            res,
+        }
+    }
+
+    pub fn bind(&self) {
+        self.res.bind();
     }
 
     pub fn draw(&self) {
@@ -268,16 +283,16 @@ pub struct MeshRes {
 }
 
 impl MeshRes {
-    pub fn new(primitive: &Primitive) -> Self {
+    pub fn new(vertices: &Vec<Vertex>, indices: &Vec<u32>) -> Self {
         let vbo = Vbo::new();
         let ebo = Ebo::new();
         let vao = Vao::new();
 
         vao.bind();
         vbo.bind();
-        vbo.upload(&primitive.vertices);
+        vbo.upload(&vertices);
         ebo.bind();
-        ebo.upload(&primitive.indices);
+        ebo.upload(&indices);
 
         // These should follow Vao, Vbo, Ebo
         unsafe {
