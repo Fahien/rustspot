@@ -2,7 +2,6 @@
 // Author: Antonio Caggiano <info@antoniocaggiano.eu>
 // SPDX-License-Identifier: MIT
 
-use std::ffi::CString;
 use std::fs::File;
 use std::io::Read;
 use std::time::Instant;
@@ -36,11 +35,7 @@ fn main() {
     let presenter = Presenter::new(&display, drm_sys::fourcc::DRM_FORMAT_RGB565, 0xFF080808)
         .expect("Failed creating presenter");
 
-    unsafe {
-        gl::load_with(|symbol| {
-            eglGetProcAddress(CString::new(symbol).unwrap().as_ptr()) as *const _
-        });
-    };
+    let mut renderer = Renderer::new();
 
     // Shaders
     let program = create_program("vert.glsl", "frag.glsl");
@@ -83,22 +78,23 @@ fn main() {
         unsafe {
             gl::ClearColor(red, 0.5, 1.0, 0.0);
             gl::Clear(gl::COLOR_BUFFER_BIT | gl::DEPTH_BUFFER_BIT);
-
-            program.enable();
-
-            camera.bind(&camera_node);
-            node.bind();
-            texture.bind();
-            mesh.bind();
-            mesh.draw();
         }
+
+        program.enable();
+
+        camera.bind(&camera_node);
+        node.bind();
+        texture.bind();
+        mesh.bind();
+        mesh.draw();
+
+        renderer.present();
 
         // Present to the screen
         context.swap_buffers();
         let surface = context.surface_lock();
         presenter.post(surface, 0, 0, 480, 320, 0, 0, 320, 480, 3);
         context.surface_unlock(surface);
-        std::thread::sleep(std::time::Duration::from_millis(15));
     }
 }
 

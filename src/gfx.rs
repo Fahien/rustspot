@@ -1,5 +1,7 @@
+use std::collections::HashMap;
 use std::ffi::CString;
 
+use crate::util::*;
 use nalgebra as na;
 
 pub struct Shader {
@@ -433,5 +435,35 @@ impl Node {
                 self.model.to_homogeneous().as_ptr(),
             );
         }
+    }
+}
+
+pub struct Renderer {
+    /// List of mesh handles to draw with nodes referring to them.
+    /// Together with nodes, we store their transform matrix computed during the scene graph traversal.
+    meshes: HashMap<usize, HashMap<usize, na::Matrix4<f32>>>,
+}
+
+impl Renderer {
+    pub fn new() -> Renderer {
+        unsafe {
+            gl::load_with(|symbol| {
+                go2::eglGetProcAddress(CString::new(symbol).unwrap().as_ptr()) as *const _
+            });
+        }
+
+        Renderer {
+            meshes: HashMap::new(),
+        }
+    }
+
+    /// Draw does not render immediately, instead it creates a list of mesh resources.
+    /// At the same time it computes transform matrices for each node to be bound later on.
+    pub fn draw(&mut self, nodes: &Vec<Node>, node: &Handle<Node>, transform: &na::Isometry3<f32>) {
+    }
+
+    /// This should be called after drawing everything to trigger the actual GL rendering.
+    pub fn present(&mut self) {
+        self.meshes.clear();
     }
 }
