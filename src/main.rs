@@ -46,7 +46,7 @@ fn main() {
     let program = create_program("vert.glsl", "frag.glsl");
 
     // Create a primitive quad
-    let primitive = Primitive::quad();
+    let mesh = Mesh::new(vec![Primitive::quad()]);
 
     // Use texture as a material for the mesh
     let texture = get_texture("res/img/fahien.png");
@@ -88,9 +88,9 @@ fn main() {
 
             camera.bind(&camera_node);
             node.bind();
-            primitive.bind();
             texture.bind();
-            primitive.draw();
+            mesh.bind();
+            mesh.draw();
         }
 
         // Present to the screen
