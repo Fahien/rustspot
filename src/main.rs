@@ -11,7 +11,9 @@ use go2::*;
 use nalgebra as na;
 
 mod gfx;
+mod util;
 use gfx::*;
+use util::*;
 
 fn main() {
     // Initialize display, context, presenter, and gl symbols
