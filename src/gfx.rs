@@ -276,6 +276,34 @@ impl Primitive {
     }
 }
 
+/// A mesh is an array of primitives to be rendered. A node can contain
+/// one mesh, and a node's transform places the mesh in the scene
+pub struct Mesh {
+    pub name: String,
+    primitives: Vec<Primitive>,
+}
+
+impl Mesh {
+    pub fn new(primitives: Vec<Primitive>) -> Self {
+        Self {
+            name: String::new(),
+            primitives,
+        }
+    }
+
+    pub fn bind(&self) {
+        for primitive in self.primitives.iter() {
+            primitive.bind();
+        }
+    }
+
+    pub fn draw(&self) {
+        for primitive in self.primitives.iter() {
+            primitive.draw();
+        }
+    }
+}
+
 pub struct MeshRes {
     _vbo: Vbo,
     _ebo: Ebo,
