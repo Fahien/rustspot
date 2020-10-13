@@ -1,8 +1,9 @@
 use std::collections::HashMap;
 use std::ffi::CString;
 
-use crate::util::*;
 use nalgebra as na;
+
+use crate::util::*;
 
 pub struct Shader {
     handle: u32,
@@ -217,7 +218,7 @@ impl Drop for Vao {
 
 /// Geometry to be rendered with a given material
 pub struct Primitive {
-    vertices: Vec<Vertex>,
+    _vertices: Vec<Vertex>,
     indices: Vec<u32>,
 
     // Res could be computed on the fly, but we would need to hash both vertices and indices,
@@ -256,7 +257,7 @@ impl Primitive {
         let res = MeshRes::new(&vertices, &indices);
 
         Self {
-            vertices,
+            _vertices: vertices,
             indices,
             res,
         }

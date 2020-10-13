@@ -9,10 +9,7 @@ use std::time::Instant;
 use go2::*;
 use nalgebra as na;
 
-mod gfx;
-mod util;
-use gfx::*;
-use util::*;
+use rustspot::{gfx::*, util::*};
 
 fn main() {
     // Initialize display, context, presenter, and gl symbols
