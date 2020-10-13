@@ -416,6 +416,8 @@ impl Camera {
 pub struct Node {
     pub name: String,
     pub model: na::Isometry3<f32>,
+    pub mesh: Handle<Mesh>,
+    pub children: Vec<Handle<Node>>,
 }
 
 impl Node {
@@ -423,10 +425,12 @@ impl Node {
         Node {
             name: String::new(),
             model: na::Isometry3::identity(),
+            mesh: Handle::none(),
+            children: vec![],
         }
     }
 
-    pub fn bind(&self, transform: &na::Matrix4<f32>) {
+    fn bind(&self, transform: &na::Matrix4<f32>) {
         unsafe {
             gl::UniformMatrix4fv(
                 0, // model location
@@ -434,6 +438,17 @@ impl Node {
                 gl::FALSE,
                 transform.as_ptr(),
             );
+        }
+    }
+
+    /// This is going to draw a node
+    pub fn draw(&self, meshes: &Pack<Mesh>, transform: &na::Matrix4<f32>) {
+        // If node has a mesh, bind this transform and draw elements
+        if self.mesh.valid() {
+            self.bind(transform);
+            // This is not going to bind any mesh resource
+            // As we expect them to be already bound
+            meshes[self.mesh.id].draw();
         }
     }
 }
