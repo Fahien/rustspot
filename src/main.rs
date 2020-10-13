@@ -118,13 +118,9 @@ fn main() {
         camera.bind(nodes.get(&camera_node).unwrap());
 
         texture.bind();
-        meshes.get(&mesh).unwrap().bind();
-        nodes
-            .get(&right)
-            .unwrap()
-            .draw(&meshes, &na::Matrix4::identity());
 
-        renderer.present();
+        renderer.draw(&nodes, &root, &na::Isometry3::identity());
+        renderer.present(&meshes, &nodes);
 
         // Present to the screen
         context.swap_buffers();

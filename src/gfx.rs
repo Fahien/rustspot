@@ -480,11 +480,56 @@ impl Renderer {
 
     /// Draw does not render immediately, instead it creates a list of mesh resources.
     /// At the same time it computes transform matrices for each node to be bound later on.
-    pub fn draw(&mut self, nodes: &Vec<Node>, node: &Handle<Node>, transform: &na::Isometry3<f32>) {
+    pub fn draw(
+        &mut self,
+        nodes: &Pack<Node>,
+        node: &Handle<Node>,
+        transform: &na::Isometry3<f32>,
+    ) {
+        // Precompute transform matrix
+        let temp_transform = transform * nodes[node.id].model;
+
+        // Here we add this to a list of nodes that should be rendered
+        let mesh = &nodes[node.id].mesh;
+        if mesh.valid() {
+            if let Some(mesh_nodes) = self.meshes.get_mut(&mesh.id) {
+                if let None = mesh_nodes.get(&node.id) {
+                    // Add this nodes to the list of nodes associated to this mesh
+                    mesh_nodes.insert(node.id, temp_transform.to_homogeneous());
+                }
+            } else {
+                // Create a new entry in the mesh resources
+                let mut mesh_nodes = HashMap::new();
+                mesh_nodes.insert(node.id, temp_transform.to_homogeneous());
+                self.meshes.insert(mesh.id, mesh_nodes);
+            }
+        }
+
+        // And all its children recursively
+        for child in nodes[node.id].children.iter() {
+            self.draw(nodes, child, &temp_transform);
+        }
     }
 
     /// This should be called after drawing everything to trigger the actual GL rendering.
-    pub fn present(&mut self) {
+    pub fn present(&mut self, meshes: &Pack<Mesh>, nodes: &Pack<Node>) {
+        // Rendering should follow this approach
+        // foreach prog in programs:
+        //   bind(prog)
+        //   foreach mat in p.materials:
+        //     bind(mat)
+        //     foreach mesh in mat.meshes:
+        //       bind(mesh)
+        //       foreach node in mesh.nodes:
+        //         draw(nodes) -> draw(mesh) -> draw(primitives)
+        for (mesh_id, node_res) in self.meshes.iter() {
+            meshes[*mesh_id].bind();
+
+            for (node_id, transform) in node_res.iter() {
+                nodes[*node_id].draw(meshes, &transform);
+            }
+        }
+
         self.meshes.clear();
     }
 }
