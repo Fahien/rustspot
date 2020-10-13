@@ -4,7 +4,7 @@ use std::ops::{Deref, DerefMut};
 /// A handle is just an index into a vector of a specific kind.
 /// It is useful when we do not want to keep a reference to an element,
 /// while taking advantage of strong typing to avoid using integers.
-#[derive(Eq, PartialEq, Hash)]
+#[derive(Eq, PartialEq, Debug)]
 pub struct Handle<T> {
     pub id: usize,
     phantom: PhantomData<T>,
