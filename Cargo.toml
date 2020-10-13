@@ -14,3 +14,11 @@ gl = "0.14.0"
 png = "0.16.7"
 nalgebra = "0.22.0"
 go2 = { path = "../libgo2-rs" }
+
+[lib]
+name = "rustspot"
+path = "src/rustspot/lib.rs"
+
+[[bin]]
+name = "rustspot-test"
+path = "src/main.rs"
