@@ -70,6 +70,22 @@ fn main() {
     let mut root = Node::new();
     root.name = String::from("root");
 
+    let mut left = Node::new();
+    left.name = String::from("left");
+    left.model
+        .append_translation_mut(&na::Translation3::new(-0.5, 0.0, 0.0));
+    left.mesh = mesh;
+    root.children.push(nodes.push(left));
+
+    let mut right = Node::new();
+    right.name = String::from("right");
+    right
+        .model
+        .append_translation_mut(&na::Translation3::new(0.5, 0.0, 0.0));
+    right.mesh = mesh;
+    let right = nodes.push(right);
+    root.children.push(right);
+
     let root = nodes.push(root);
 
     loop {
@@ -100,14 +116,13 @@ fn main() {
         program.enable();
 
         camera.bind(nodes.get(&camera_node).unwrap());
+
         texture.bind();
-
-        let root = nodes.get(&root).unwrap();
-        root.bind(&root.model.to_homogeneous());
-
-        let mesh = meshes.get(&mesh).unwrap();
-        mesh.bind();
-        mesh.draw();
+        meshes.get(&mesh).unwrap().bind();
+        nodes
+            .get(&right)
+            .unwrap()
+            .draw(&meshes, &na::Matrix4::identity());
 
         renderer.present();
 
