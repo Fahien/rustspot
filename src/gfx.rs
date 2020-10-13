@@ -426,15 +426,21 @@ impl Node {
         }
     }
 
-    pub fn bind(&self) {
+    pub fn bind(&self, transform: &na::Matrix4<f32>) {
         unsafe {
             gl::UniformMatrix4fv(
                 0, // model location
                 1,
                 gl::FALSE,
-                self.model.to_homogeneous().as_ptr(),
+                transform.as_ptr(),
             );
         }
+    }
+}
+
+impl std::fmt::Debug for Node {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(f, "Node {}", self.name)
     }
 }
 

@@ -41,23 +41,36 @@ fn main() {
     let program = create_program("vert.glsl", "frag.glsl");
 
     // Create a primitive quad
-    let mesh = Mesh::new(vec![Primitive::quad()]);
+    let mut mesh = Mesh::new(vec![Primitive::quad()]);
+    mesh.name = String::from("quad");
+
+    // Store mesh in a vector
+    let mut meshes = Pack::new();
+    let mesh = meshes.push(mesh);
 
     // Use texture as a material for the mesh
     let texture = get_texture("res/img/fahien.png");
 
+    let mut nodes = Pack::new();
+
     let camera = Camera::perspective();
+
     let mut camera_node = Node::new();
+    camera_node.name = String::from("camera");
     camera_node
         .model
         .append_translation_mut(&na::Translation3::new(0.0, 0.0, -1.0));
+    let camera_node = nodes.push(camera_node);
 
     let mut step = 0.5;
     let mut prev = Instant::now();
 
     let mut red = 0.0;
 
-    let mut node = Node::new();
+    let mut root = Node::new();
+    root.name = String::from("root");
+
+    let root = nodes.push(root);
 
     loop {
         // Calculate delta time
@@ -72,7 +85,11 @@ fn main() {
         }
 
         let rot = na::UnitQuaternion::from_axis_angle(&na::Vector3::y_axis(), delta.as_secs_f32());
-        node.model.append_rotation_mut(&rot);
+        nodes
+            .get_mut(&root)
+            .unwrap()
+            .model
+            .append_rotation_mut(&rot);
 
         // Render something
         unsafe {
@@ -82,9 +99,13 @@ fn main() {
 
         program.enable();
 
-        camera.bind(&camera_node);
-        node.bind();
+        camera.bind(nodes.get(&camera_node).unwrap());
         texture.bind();
+
+        let root = nodes.get(&root).unwrap();
+        root.bind(&root.model.to_homogeneous());
+
+        let mesh = meshes.get(&mesh).unwrap();
         mesh.bind();
         mesh.draw();
 
