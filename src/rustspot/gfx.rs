@@ -96,20 +96,28 @@ impl Texture {
         unsafe { gl::BindTexture(gl::TEXTURE_2D, self.handle) };
     }
 
-    pub fn upload<T>(&self, width: u32, height: u32, data: &[T]) {
+    pub fn upload<T>(&mut self, width: u32, height: u32, data: &[T]) {
+        self.bind();
+
         unsafe {
             gl::TexImage2D(
                 gl::TEXTURE_2D,
                 0,
-                gl::SRGB as i32,
+                gl::RGBA as i32,
                 width as i32,
                 height as i32,
                 0,
-                gl::SRGB,
+                gl::RGBA,
                 gl::UNSIGNED_BYTE,
-                &data[0] as *const T as *const libc::c_void,
+                &data[0] as *const T as _,
             );
+
             gl::GenerateMipmap(gl::TEXTURE_2D);
+
+            gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_WRAP_S, gl::REPEAT as i32);
+            gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_WRAP_T, gl::REPEAT as i32);
+            gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MIN_FILTER, gl::NEAREST as i32);
+            gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MAG_FILTER, gl::NEAREST as i32);
         };
     }
 }
@@ -137,7 +145,8 @@ impl Vbo {
         unsafe { gl::BindBuffer(gl::ARRAY_BUFFER, self.handle) };
     }
 
-    fn upload<T>(&self, vertices: &Vec<T>) {
+    fn upload<T>(&mut self, vertices: &Vec<T>) {
+        self.bind();
         unsafe {
             gl::BufferData(
                 gl::ARRAY_BUFFER,
@@ -172,7 +181,8 @@ impl Ebo {
         unsafe { gl::BindBuffer(gl::ELEMENT_ARRAY_BUFFER, self.handle) };
     }
 
-    fn upload(&self, indices: &Vec<u32>) {
+    fn upload(&mut self, indices: &Vec<u32>) {
+        self.bind();
         unsafe {
             gl::BufferData(
                 gl::ELEMENT_ARRAY_BUFFER,
@@ -254,7 +264,7 @@ impl Primitive {
         ];
         let indices = vec![0, 1, 2, 2, 3, 0];
 
-        let res = MeshRes::new(&vertices, &indices);
+        let res = MeshRes::from(&vertices, &indices);
 
         Self {
             _vertices: vertices,
@@ -308,22 +318,26 @@ impl Mesh {
 }
 
 pub struct MeshRes {
-    _vbo: Vbo,
-    _ebo: Ebo,
+    vbo: Vbo,
+    ebo: Ebo,
     vao: Vao,
 }
 
 impl MeshRes {
-    pub fn new(vertices: &Vec<Vertex>, indices: &Vec<u32>) -> Self {
+    pub fn new() -> Self {
         let vbo = Vbo::new();
         let ebo = Ebo::new();
         let vao = Vao::new();
 
-        vao.bind();
-        vbo.bind();
-        vbo.upload(&vertices);
-        ebo.bind();
-        ebo.upload(&indices);
+        Self { vbo, ebo, vao }
+    }
+
+    pub fn from(vertices: &Vec<Vertex>, indices: &Vec<u32>) -> Self {
+        let mut res = MeshRes::new();
+
+        res.vao.bind();
+        res.vbo.upload(&vertices);
+        res.ebo.upload(&indices);
 
         // These should follow Vao, Vbo, Ebo
         unsafe {
@@ -361,11 +375,7 @@ impl MeshRes {
             gl::EnableVertexAttribArray(2)
         }
 
-        Self {
-            _vbo: vbo,
-            _ebo: ebo,
-            vao,
-        }
+        res
     }
 
     pub fn bind(&self) {
