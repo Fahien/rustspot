@@ -2,3 +2,4 @@ target
 res/img
 res/doc
 .vscode
+imgui.ini
