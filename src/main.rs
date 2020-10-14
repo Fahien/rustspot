@@ -4,7 +4,6 @@
 
 use std::fs::File;
 use std::io::Read;
-use std::time::Instant;
 
 use go2::*;
 use nalgebra as na;
@@ -59,9 +58,9 @@ fn main() {
         .append_translation_mut(&na::Translation3::new(0.0, 0.0, -1.0));
     let camera_node = nodes.push(camera_node);
 
-    let mut step = 0.5;
-    let mut prev = Instant::now();
+    let mut timer = Timer::new();
 
+    let mut step = 0.5;
     let mut red = 0.0;
 
     let mut root = Node::new();
@@ -87,9 +86,7 @@ fn main() {
 
     loop {
         // Calculate delta time
-        let now = Instant::now();
-        let delta = now - prev;
-        prev = now;
+        let delta = timer.get_delta();
 
         // Update logic
         red += step * delta.as_secs_f32();
