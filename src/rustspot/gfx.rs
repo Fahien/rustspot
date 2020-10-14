@@ -470,6 +470,28 @@ impl std::fmt::Debug for Node {
     }
 }
 
+fn gl_err_to_string(err: gl::types::GLenum) -> &'static str {
+    match err {
+        gl::INVALID_ENUM => "Invalid enum",
+        gl::INVALID_VALUE => "Invalid value",
+        gl::INVALID_OPERATION => "Invalid operation",
+        gl::STACK_OVERFLOW => "Stack overflow",
+        gl::STACK_UNDERFLOW => "Stack underflow",
+        gl::OUT_OF_MEMORY => "Out of memory",
+        gl::INVALID_FRAMEBUFFER_OPERATION => "Invalid framebuffer operation",
+        gl::CONTEXT_LOST => "Context lost",
+        _ => "Unknown",
+    }
+}
+
+/// Useful function to check for graphics errors
+pub fn gl_check() {
+    let err = unsafe { gl::GetError() };
+    if err != gl::NO_ERROR {
+        panic!("GlError {}", gl_err_to_string(err));
+    }
+}
+
 pub struct Renderer {
     /// List of mesh handles to draw with nodes referring to them.
     /// Together with nodes, we store their transform matrix computed during the scene graph traversal.
@@ -478,11 +500,16 @@ pub struct Renderer {
 
 impl Renderer {
     pub fn new() -> Renderer {
+        let (mut major, mut minor) = (0, 0);
         unsafe {
             gl::load_with(|symbol| {
                 go2::eglGetProcAddress(CString::new(symbol).unwrap().as_ptr()) as *const _
             });
+
+            gl::GetIntegerv(gl::MAJOR_VERSION, &mut major);
+            gl::GetIntegerv(gl::MINOR_VERSION, &mut minor);
         }
+        println!("OpenGL v{}.{}", major, minor);
 
         Renderer {
             meshes: HashMap::new(),
