@@ -45,7 +45,7 @@ fn main() {
     let mesh = meshes.push(mesh);
 
     // Use texture as a material for the mesh
-    let texture = get_texture("res/img/fahien.png");
+    let texture = get_texture("res/img/assets.png");
 
     let mut nodes = Pack::new();
 
@@ -152,15 +152,7 @@ fn get_texture(path: &str) -> Texture {
         .next_frame(data.as_mut_slice())
         .expect("Failed to read png frame");
 
-    let texture = Texture::new();
-    texture.bind();
+    let mut texture = Texture::new();
     texture.upload(info.width, info.height, &data);
-    unsafe {
-        gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_WRAP_S, gl::REPEAT as i32);
-        gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_WRAP_T, gl::REPEAT as i32);
-        gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MIN_FILTER, gl::LINEAR as i32);
-        gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MAG_FILTER, gl::LINEAR as i32);
-    }
-
     texture
 }
