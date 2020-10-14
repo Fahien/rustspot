@@ -33,6 +33,9 @@ fn main() {
 
     let mut renderer = Renderer::new();
 
+    let mut gui = imgui::Context::create();
+    let mut gui_res = GuiRes::new(&mut gui.fonts());
+
     // Shaders
     let program = create_program("vert.glsl", "frag.glsl");
 
@@ -88,6 +91,11 @@ fn main() {
         // Calculate delta time
         let delta = timer.get_delta();
 
+        // Update GUI
+        let ui = gui.io_mut();
+        ui.update_delta_time(delta);
+        ui.display_size = [480.0, 320.0];
+
         // Update logic
         red += step * delta.as_secs_f32();
         if red > 1.0 || red < 0.0 {
@@ -103,6 +111,13 @@ fn main() {
 
         // Render something
         unsafe {
+            gl::Enable(gl::BLEND);
+            gl::BlendEquation(gl::FUNC_ADD);
+            gl::BlendFunc(gl::SRC_ALPHA, gl::ONE_MINUS_SRC_ALPHA);
+            gl::Disable(gl::CULL_FACE);
+            gl::Disable(gl::DEPTH_TEST);
+            gl::Disable(gl::SCISSOR_TEST);
+
             gl::ClearColor(red, 0.5, 1.0, 0.0);
             gl::Clear(gl::COLOR_BUFFER_BIT | gl::DEPTH_BUFFER_BIT);
         }
@@ -115,6 +130,18 @@ fn main() {
 
         renderer.draw(&nodes, &root, &na::Isometry3::identity());
         renderer.present(&meshes, &nodes);
+
+        // Render GUI
+        let ui = gui.frame();
+
+        // Draw gui here before drawing it
+        imgui::Window::new(imgui::im_str!("RustSpot"))
+            .size([300.0, 60.0], imgui::Condition::FirstUseEver)
+            .build(&ui, || {
+                ui.text("Hello world!");
+            });
+
+        gui_res.draw(ui);
 
         // Present to the screen
         context.swap_buffers();

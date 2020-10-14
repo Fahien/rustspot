@@ -470,6 +470,216 @@ impl std::fmt::Debug for Node {
     }
 }
 
+pub struct GuiRes {
+    _font_texture: Texture,
+    program: ShaderProgram,
+    mesh_res: MeshRes,
+}
+
+impl GuiRes {
+    pub fn new(fonts: &mut imgui::FontAtlasRefMut) -> Self {
+        // Font
+        let mut font_texture = Texture::new();
+        let texture = fonts.build_rgba32_texture();
+        font_texture.upload(texture.width, texture.height, texture.data);
+        fonts.tex_id = (font_texture.handle as usize).into();
+
+        // Shaders
+        let vert_source = r#"#version 320 es
+
+        layout (location = 0) in vec2 in_position;
+        layout (location = 1) in vec2 in_tex_coords;
+        layout (location = 2) in vec4 in_color;
+
+        layout (location = 0) uniform mat4 proj;
+
+        out vec2 tex_coords;
+        out vec4 color;
+
+        void main()
+        {
+            tex_coords = in_tex_coords;
+            color = in_color;
+            gl_Position = proj * vec4(in_position, 0.0, 1.0);
+        }
+        "#;
+
+        let frag_source = r#"#version 320 es
+        precision mediump float;
+
+        in vec2 tex_coords;
+        in vec4 color;
+
+        layout (location = 1) uniform sampler2D tex_sampler;
+
+        out vec4 out_color;
+
+        void main()
+        {
+            out_color = color * texture(tex_sampler, tex_coords);
+        }
+        "#;
+
+        let vert = Shader::new(gl::VERTEX_SHADER, vert_source.as_bytes())
+            .expect("Failed to create imgui vertex shader");
+        let frag = Shader::new(gl::FRAGMENT_SHADER, frag_source.as_bytes())
+            .expect("Failed to create imgui fragment shader");
+
+        let program = ShaderProgram::new(vert, frag);
+
+        // Mesh resources
+        let mesh_res = MeshRes::new();
+
+        mesh_res.vao.bind();
+        mesh_res.vbo.bind();
+        mesh_res.ebo.bind();
+
+        let stride = std::mem::size_of::<imgui::DrawVert>() as i32;
+
+        unsafe {
+            // Position
+            gl::VertexAttribPointer(0, 2, gl::FLOAT, gl::FALSE, stride, 0 as _);
+            gl::EnableVertexAttribArray(0);
+
+            // Texture coordinates
+            gl::VertexAttribPointer(
+                1,
+                2,
+                gl::FLOAT,
+                gl::FALSE,
+                stride,
+                (2 * std::mem::size_of::<f32>()) as _,
+            );
+            gl::EnableVertexAttribArray(1);
+
+            // Color
+            gl::VertexAttribPointer(
+                2,
+                4,
+                gl::UNSIGNED_BYTE,
+                gl::TRUE,
+                stride,
+                (4 * std::mem::size_of::<f32>()) as _,
+            );
+            gl::EnableVertexAttribArray(2);
+        }
+
+        GuiRes {
+            _font_texture: font_texture,
+            program,
+            mesh_res,
+        }
+    }
+
+    pub fn draw(&mut self, ui: imgui::Ui) {
+        let [width, height] = ui.io().display_size;
+        let [scale_w, scale_h] = ui.io().display_framebuffer_scale;
+        let fb_width = width * scale_w;
+        let fb_height = height * scale_h;
+
+        unsafe {
+            gl::Enable(gl::BLEND);
+            gl::BlendEquation(gl::FUNC_ADD);
+            gl::BlendFunc(gl::SRC_ALPHA, gl::ONE_MINUS_SRC_ALPHA);
+            gl::Disable(gl::CULL_FACE);
+            gl::Disable(gl::DEPTH_TEST);
+            gl::Enable(gl::SCISSOR_TEST);
+            // There is no glPolygonMode in GLES3.2
+            // gl::PolygonMode(gl::FRONT_AND_BACK, gl::FILL);
+            gl::Viewport(0, 0, fb_width as _, fb_height as _);
+        }
+
+        let data = ui.render();
+
+        let matrix = [
+            [2.0 / width as f32, 0.0, 0.0, 0.0],
+            [0.0, 2.0 / -(height as f32), 0.0, 0.0],
+            [0.0, 0.0, -1.0, 0.0],
+            [-1.0, 1.0, 0.0, 1.0],
+        ];
+
+        self.program.enable();
+
+        unsafe {
+            gl::Uniform1i(1, 0);
+            gl::UniformMatrix4fv(0, 1, gl::FALSE, matrix.as_ptr() as _);
+        }
+
+        for draw_list in data.draw_lists() {
+            let vtx_buffer = draw_list.vtx_buffer();
+            let idx_buffer = draw_list.idx_buffer();
+
+            self.mesh_res.vao.bind();
+
+            self.mesh_res.vbo.bind();
+            unsafe {
+                gl::BufferData(
+                    gl::ARRAY_BUFFER,
+                    (vtx_buffer.len() * std::mem::size_of::<imgui::DrawVert>()) as _,
+                    vtx_buffer.as_ptr() as _,
+                    gl::STREAM_DRAW,
+                );
+            }
+
+            self.mesh_res.ebo.bind();
+            unsafe {
+                gl::BufferData(
+                    gl::ELEMENT_ARRAY_BUFFER,
+                    (idx_buffer.len() * std::mem::size_of::<imgui::DrawIdx>()) as _,
+                    idx_buffer.as_ptr() as _,
+                    gl::STREAM_DRAW,
+                );
+            }
+
+            for cmd in draw_list.commands() {
+                match cmd {
+                    imgui::DrawCmd::Elements {
+                        count,
+                        cmd_params:
+                            imgui::DrawCmdParams {
+                                clip_rect: [x, y, z, w],
+                                texture_id,
+                                idx_offset,
+                                ..
+                            },
+                    } => {
+                        unsafe {
+                            gl::BindTexture(gl::TEXTURE_2D, texture_id.id() as _);
+                            gl::Scissor(
+                                (x * scale_w) as gl::types::GLint,
+                                (fb_height - w * scale_h) as gl::types::GLint,
+                                ((z - x) * scale_w) as gl::types::GLint,
+                                ((w - y) * scale_h) as gl::types::GLint,
+                            );
+                        }
+
+                        let idx_size = if std::mem::size_of::<imgui::DrawIdx>() == 2 {
+                            gl::UNSIGNED_SHORT
+                        } else {
+                            gl::UNSIGNED_INT
+                        };
+
+                        unsafe {
+                            gl::DrawElements(
+                                gl::TRIANGLES,
+                                count as _,
+                                idx_size,
+                                (idx_offset * std::mem::size_of::<imgui::DrawIdx>()) as _,
+                            );
+                        }
+                    }
+                    imgui::DrawCmd::ResetRenderState => {
+                        unimplemented!("DrawCmd::ResetRenderState not implemented");
+                    }
+                    imgui::DrawCmd::RawCallback { .. } => {
+                        unimplemented!("User callbacks not implemented");
+                    }
+                }
+            }
+        }
+    }
+}
+
 fn gl_err_to_string(err: gl::types::GLenum) -> &'static str {
     match err {
         gl::INVALID_ENUM => "Invalid enum",
