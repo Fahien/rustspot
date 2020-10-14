@@ -1,5 +1,6 @@
 use std::marker::PhantomData;
 use std::ops::{Deref, DerefMut};
+use std::time::{Duration, Instant};
 
 /// A handle is just an index into a vector of a specific kind.
 /// It is useful when we do not want to keep a reference to an element,
@@ -119,5 +120,32 @@ mod test {
             assert_eq!(handles[i as usize].get(&pack).unwrap().val, i);
             assert_eq!(pack.get(&handles[i as usize]).unwrap().val, i);
         }
+    }
+}
+
+/// Useful timer to get delta time, and previous time for ImGui
+pub struct Timer {
+    prev: Instant,
+    curr: Instant,
+}
+
+impl Timer {
+    pub fn new() -> Self {
+        let prev = Instant::now();
+        let curr = Instant::now();
+        Self { prev, curr }
+    }
+
+    /// Returns delta time in seconds
+    pub fn get_delta(&mut self) -> Duration {
+        self.curr = Instant::now();
+        let delta = self.curr - self.prev;
+        self.prev = self.curr;
+        delta
+    }
+
+    /// Returns the time of last `get_delta()`
+    pub fn get_prev(&self) -> Instant {
+        self.prev
     }
 }
