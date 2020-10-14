@@ -32,7 +32,7 @@ impl<T> Handle<T> {
 }
 
 impl<'a, T> Handle<T> {
-    fn get(&self, pack: &'a Pack<T>) -> Option<&'a T> {
+    pub fn get(&self, pack: &'a Pack<T>) -> Option<&'a T> {
         pack.vec.get(self.id)
     }
 }
