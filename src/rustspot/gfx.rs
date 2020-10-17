@@ -67,6 +67,15 @@ impl ShaderProgram {
     pub fn enable(&self) {
         unsafe { gl::UseProgram(self.handle) };
     }
+
+    pub fn get_uniform_location(&self, name: &str) -> Result<i32, &str> {
+        let name = CString::new(name).expect("Failed converting Rust name to C string");
+        let location = unsafe { gl::GetUniformLocation(self.handle, name.as_ptr()) };
+        if location == -1 {
+            return Err("Failed to get uniform location");
+        }
+        Ok(location)
+    }
 }
 
 impl Drop for ShaderProgram {
@@ -405,21 +414,23 @@ impl Camera {
         }
     }
 
-    pub fn bind(&self, view: &Node) {
+    pub fn bind(&self, program: &ShaderProgram, view: &Node) {
+        let view_loc = program
+            .get_uniform_location("view")
+            .expect("Failed to get view uniform location");
+        let proj_loc = program
+            .get_uniform_location("proj")
+            .expect("Failed to get proj uniform location");
+
         unsafe {
             gl::UniformMatrix4fv(
-                1, // view location
+                view_loc,
                 1,
                 gl::FALSE,
                 view.model.inverse().to_homogeneous().as_ptr(),
             );
 
-            gl::UniformMatrix4fv(
-                2, // proj location
-                1,
-                gl::FALSE,
-                self.proj.as_ptr(),
-            );
+            gl::UniformMatrix4fv(proj_loc, 1, gl::FALSE, self.proj.as_ptr());
         }
     }
 }
@@ -441,22 +452,20 @@ impl Node {
         }
     }
 
-    fn bind(&self, transform: &na::Matrix4<f32>) {
+    fn bind(&self, program: &ShaderProgram, transform: &na::Matrix4<f32>) {
+        let model_loc = program
+            .get_uniform_location("model")
+            .expect("Failed to get model uniform location");
         unsafe {
-            gl::UniformMatrix4fv(
-                0, // model location
-                1,
-                gl::FALSE,
-                transform.as_ptr(),
-            );
+            gl::UniformMatrix4fv(model_loc, 1, gl::FALSE, transform.as_ptr());
         }
     }
 
     /// This is going to draw a node
-    pub fn draw(&self, meshes: &Pack<Mesh>, transform: &na::Matrix4<f32>) {
+    pub fn draw(&self, program: &ShaderProgram, meshes: &Pack<Mesh>, transform: &na::Matrix4<f32>) {
         // If node has a mesh, bind this transform and draw elements
         if self.mesh.valid() {
-            self.bind(transform);
+            self.bind(program, transform);
             // This is not going to bind any mesh resource
             // As we expect them to be already bound
             meshes[self.mesh.id].draw();
@@ -491,7 +500,7 @@ impl GuiRes {
         layout (location = 1) in vec2 in_tex_coords;
         layout (location = 2) in vec4 in_color;
 
-        layout (location = 0) uniform mat4 proj;
+        uniform mat4 proj;
 
         out vec2 tex_coords;
         out vec4 color;
@@ -510,7 +519,7 @@ impl GuiRes {
         in vec2 tex_coords;
         in vec4 color;
 
-        layout (location = 1) uniform sampler2D tex_sampler;
+        uniform sampler2D tex_sampler;
 
         out vec4 out_color;
 
@@ -600,9 +609,17 @@ impl GuiRes {
 
         self.program.enable();
 
+        let proj_loc = self
+            .program
+            .get_uniform_location("proj")
+            .expect("Failed to get proj location");
+        let tex_sampler_loc = self
+            .program
+            .get_uniform_location("tex_sampler")
+            .expect("Failed to get tex_sampler location");
         unsafe {
-            gl::Uniform1i(1, 0);
-            gl::UniformMatrix4fv(0, 1, gl::FALSE, matrix.as_ptr() as _);
+            gl::UniformMatrix4fv(proj_loc, 1, gl::FALSE, matrix.as_ptr() as _);
+            gl::Uniform1i(tex_sampler_loc, 0);
         }
 
         for draw_list in data.draw_lists() {
@@ -749,7 +766,7 @@ impl Renderer {
     }
 
     /// This should be called after drawing everything to trigger the actual GL rendering.
-    pub fn present(&mut self, meshes: &Pack<Mesh>, nodes: &Pack<Node>) {
+    pub fn present(&mut self, program: &ShaderProgram, meshes: &Pack<Mesh>, nodes: &Pack<Node>) {
         // Rendering should follow this approach
         // foreach prog in programs:
         //   bind(prog)
@@ -763,7 +780,7 @@ impl Renderer {
             meshes[*mesh_id].bind();
 
             for (node_id, transform) in node_res.iter() {
-                nodes[*node_id].draw(meshes, &transform);
+                nodes[*node_id].draw(program, meshes, &transform);
             }
         }
 
