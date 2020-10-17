@@ -139,6 +139,22 @@ impl Drop for Texture {
     }
 }
 
+pub struct Material {
+    texture: Handle<Texture>,
+}
+
+impl Material {
+    pub fn new(texture: Handle<Texture>) -> Self {
+        Self { texture }
+    }
+
+    pub fn bind(&self, textures: &Pack<Texture>) {
+        if let Some(texture) = textures.get(&self.texture) {
+            texture.bind();
+        }
+    }
+}
+
 struct Vbo {
     handle: u32,
 }
@@ -239,6 +255,7 @@ impl Drop for Vao {
 pub struct Primitive {
     _vertices: Vec<Vertex>,
     indices: Vec<u32>,
+    material: Handle<Material>,
 
     // Res could be computed on the fly, but we would need to hash both vertices and indices,
     // therefore we store it here and it is responsibility of the scene builder to avoid an
@@ -248,7 +265,7 @@ pub struct Primitive {
 
 impl Primitive {
     /// Returns a new primitive quad with side length 1 centered at the origin
-    pub fn quad() -> Self {
+    pub fn quad(material: Handle<Material>) -> Self {
         let vertices = vec![
             Vertex {
                 position: [-0.5, -0.5, 0.0],
@@ -278,10 +295,13 @@ impl Primitive {
         Self {
             _vertices: vertices,
             indices,
+            material,
             res,
         }
     }
 
+    /// This function is going to bind only this primitive's VAO. We do not bind the
+    /// primitives' material here because we expect the renderer has already bound it.
     pub fn bind(&self) {
         self.res.bind();
     }
@@ -302,26 +322,14 @@ impl Primitive {
 /// one mesh, and a node's transform places the mesh in the scene
 pub struct Mesh {
     pub name: String,
-    primitives: Vec<Primitive>,
+    primitives: Vec<Handle<Primitive>>,
 }
 
 impl Mesh {
-    pub fn new(primitives: Vec<Primitive>) -> Self {
+    pub fn new(primitives: Vec<Handle<Primitive>>) -> Self {
         Self {
             name: String::new(),
             primitives,
-        }
-    }
-
-    pub fn bind(&self) {
-        for primitive in self.primitives.iter() {
-            primitive.bind();
-        }
-    }
-
-    pub fn draw(&self) {
-        for primitive in self.primitives.iter() {
-            primitive.draw();
         }
     }
 }
@@ -458,17 +466,6 @@ impl Node {
             .expect("Failed to get model uniform location");
         unsafe {
             gl::UniformMatrix4fv(model_loc, 1, gl::FALSE, transform.as_ptr());
-        }
-    }
-
-    /// This is going to draw a node
-    pub fn draw(&self, program: &ShaderProgram, meshes: &Pack<Mesh>, transform: &na::Matrix4<f32>) {
-        // If node has a mesh, bind this transform and draw elements
-        if self.mesh.valid() {
-            self.bind(program, transform);
-            // This is not going to bind any mesh resource
-            // As we expect them to be already bound
-            meshes[self.mesh.id].draw();
         }
     }
 }
@@ -720,15 +717,19 @@ pub fn gl_check() {
 }
 
 pub struct Renderer {
-    /// List of mesh handles to draw with nodes referring to them.
+    /// List of material handles to bind with primitives referring to them.
+    materials: HashMap<usize, Vec<usize>>,
+
+    /// List of primitive handles to draw with nodes referring to them.
     /// Together with nodes, we store their transform matrix computed during the scene graph traversal.
-    meshes: HashMap<usize, HashMap<usize, na::Matrix4<f32>>>,
+    primitives: HashMap<usize, HashMap<usize, na::Matrix4<f32>>>,
 }
 
 impl Renderer {
     pub fn new() -> Renderer {
         Renderer {
-            meshes: HashMap::new(),
+            materials: HashMap::new(),
+            primitives: HashMap::new(),
         }
     }
 
@@ -736,6 +737,8 @@ impl Renderer {
     /// At the same time it computes transform matrices for each node to be bound later on.
     pub fn draw(
         &mut self,
+        primitives: &Pack<Primitive>,
+        meshes: &Pack<Mesh>,
         nodes: &Pack<Node>,
         node: &Handle<Node>,
         transform: &na::Isometry3<f32>,
@@ -745,46 +748,84 @@ impl Renderer {
 
         // Here we add this to a list of nodes that should be rendered
         let mesh = &nodes[node.id].mesh;
-        if mesh.valid() {
-            if let Some(mesh_nodes) = self.meshes.get_mut(&mesh.id) {
-                if let None = mesh_nodes.get(&node.id) {
-                    // Add this nodes to the list of nodes associated to this mesh
-                    mesh_nodes.insert(node.id, temp_transform.to_homogeneous());
+        if let Some(mesh) = meshes.get(&mesh) {
+            for primitive_handle in mesh.primitives.iter() {
+                // Store this association material, primitive
+                if let Some(primitive) = primitives.get(&primitive_handle) {
+                    if primitive.material.valid() {
+                        let key = primitive.material.id;
+                        // Check if an entry already exists
+                        if let Some(material_primitives) = self.materials.get_mut(&key) {
+                            // Add this primitive id to the value list
+                            material_primitives.push(primitive_handle.id);
+                        } else {
+                            // Create a new entry (material, primitives)
+                            self.materials.insert(key, vec![primitive_handle.id]);
+                        }
+                    }
                 }
-            } else {
-                // Create a new entry in the mesh resources
-                let mut mesh_nodes = HashMap::new();
-                mesh_nodes.insert(node.id, temp_transform.to_homogeneous());
-                self.meshes.insert(mesh.id, mesh_nodes);
+
+                // Get those nodes referring to this primitive
+                if let Some(primitive_nodes) = self.primitives.get_mut(&primitive_handle.id) {
+                    if let None = primitive_nodes.get(&node.id) {
+                        // Add this nodes to the list of nodes associated to this primitive
+                        primitive_nodes.insert(node.id, temp_transform.to_homogeneous());
+                    }
+                } else {
+                    // Create a new entry in the primitive resources
+                    let mut primitive_nodes = HashMap::new();
+                    primitive_nodes.insert(node.id, temp_transform.to_homogeneous());
+                    self.primitives.insert(primitive_handle.id, primitive_nodes);
+                }
             }
         }
 
         // And all its children recursively
         for child in nodes[node.id].children.iter() {
-            self.draw(nodes, child, &temp_transform);
+            self.draw(primitives, meshes, nodes, child, &temp_transform);
         }
     }
 
     /// This should be called after drawing everything to trigger the actual GL rendering.
-    pub fn present(&mut self, program: &ShaderProgram, meshes: &Pack<Mesh>, nodes: &Pack<Node>) {
+    pub fn present(
+        &mut self,
+        program: &ShaderProgram,
+        textures: &Pack<Texture>,
+        materials: &Pack<Material>,
+        primitives: &Pack<Primitive>,
+        nodes: &Pack<Node>,
+    ) {
         // Rendering should follow this approach
         // foreach prog in programs:
         //   bind(prog)
         //   foreach mat in p.materials:
         //     bind(mat)
-        //     foreach mesh in mat.meshes:
-        //       bind(mesh)
-        //       foreach node in mesh.nodes:
-        //         draw(nodes) -> draw(mesh) -> draw(primitives)
-        for (mesh_id, node_res) in self.meshes.iter() {
-            meshes[*mesh_id].bind();
+        //     foreach prim in mat.primitives:
+        //       bind(prim)
+        //       foreach node in prim.nodes:
+        //         bind(node) -> draw(prim)
 
-            for (node_id, transform) in node_res.iter() {
-                nodes[*node_id].draw(program, meshes, &transform);
+        // Need to bind materials for a group of primitives that use the same one
+        for (material_id, primitive_ids) in self.materials.iter() {
+            let material = &materials[*material_id];
+            material.bind(&textures);
+
+            for primitive_id in primitive_ids.iter() {
+                let primitive = &primitives[*primitive_id];
+                assert!(primitive.material.valid());
+
+                // Bind the primitive, bind the nodes using that primitive, draw the primitive.
+                primitive.bind();
+                let node_res = &self.primitives[primitive_id];
+                for (node_id, transform) in node_res.iter() {
+                    nodes[*node_id].bind(program, &transform);
+                    primitive.draw();
+                }
             }
         }
 
-        self.meshes.clear();
+        self.materials.clear();
+        self.primitives.clear();
     }
 }
 
