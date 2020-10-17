@@ -3,3 +3,4 @@ res/img
 res/doc
 .vscode
 imgui.ini
+SDL2.*
