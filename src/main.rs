@@ -105,12 +105,12 @@ fn main() {
 
         program.enable();
 
-        camera.bind(nodes.get(&camera_node).unwrap());
+        camera.bind(&program, nodes.get(&camera_node).unwrap());
 
         texture.bind();
 
         gfx.renderer.draw(&nodes, &root, &na::Isometry3::identity());
-        gfx.renderer.present(&meshes, &nodes);
+        gfx.renderer.present(&program, &meshes, &nodes);
 
         // Render GUI
         let ui = gui.frame();
