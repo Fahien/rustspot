@@ -10,6 +10,9 @@ use nalgebra as na;
 use rustspot::{gfx::*, util::*};
 
 fn main() {
+    let sdl = sdl2::init().expect("Failed to initialize SDL2");
+    let mut events = sdl.event_pump().expect("Failed to initialize SDL2 events");
+
     let mut gfx = Gfx::new();
     let gl_version = gfx.get_gl_version();
     println!("OpenGL v{}.{}", gl_version.0, gl_version.1);
@@ -68,7 +71,15 @@ fn main() {
 
     let root = nodes.push(root);
 
-    loop {
+    'gameloop: loop {
+        // Handle SDL2 events
+        for event in events.poll_iter() {
+            match event {
+                sdl2::event::Event::Quit { .. } => break 'gameloop,
+                _ => println!("{:?}", event),
+            }
+        }
+
         // Calculate delta time
         let delta = timer.get_delta();
 
