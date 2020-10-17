@@ -23,16 +23,29 @@ fn main() {
     // Shaders
     let program = create_program("vert.glsl", "frag.glsl");
 
-    // Create a primitive quad
-    let mut mesh = Mesh::new(vec![Primitive::quad()]);
+    // Store textures in a vector
+    let mut textures = Pack::new();
+    let texture = textures.push(get_texture("res/img/lena.png"));
+
+    // Store materials in a vector
+    let mut materials = Pack::new();
+
+    // Create a material with the previous texture
+    let material = materials.push(Material::new(texture));
+
+    // Store primitives in a vector
+    let mut primitives = Pack::new();
+
+    // Create a primitive quad with the previous material
+    let primitive = primitives.push(Primitive::quad(material));
+
+    // Create a mesh with a primitive quad
+    let mut mesh = Mesh::new(vec![primitive]);
     mesh.name = String::from("quad");
 
     // Store mesh in a vector
     let mut meshes = Pack::new();
     let mesh = meshes.push(mesh);
-
-    // Use texture as a material for the mesh
-    let texture = get_texture("res/img/lena.png");
 
     let mut nodes = Pack::new();
 
@@ -118,10 +131,8 @@ fn main() {
 
         camera.bind(&program, nodes.get(&camera_node).unwrap());
 
-        texture.bind();
-
-        gfx.renderer.draw(&nodes, &root, &na::Isometry3::identity());
-        gfx.renderer.present(&program, &meshes, &nodes);
+        gfx.renderer.draw(&primitives, &meshes, &nodes, &root, &na::Isometry3::identity());
+        gfx.renderer.present(&program, &textures, &materials, &primitives, &nodes);
 
         // Render GUI
         let ui = gui.frame();
