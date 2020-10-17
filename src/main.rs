@@ -5,33 +5,14 @@
 use std::fs::File;
 use std::io::Read;
 
-use go2::*;
 use nalgebra as na;
 
 use rustspot::{gfx::*, util::*};
 
 fn main() {
-    // Initialize display, context, presenter, and gl symbols
-    let display = Display::new().expect("Failed creating display");
-
-    let attr = ContextAttributes {
-        major: 3,
-        minor: 2,
-        red_bits: 8,
-        green_bits: 8,
-        blue_bits: 8,
-        alpha_bits: 8,
-        depth_bits: 24,
-        stencil_bits: 0,
-    };
-
-    let context = Context::new(&display, 480, 320, &attr).expect("Failed creating context");
-    context.make_current();
-
-    let presenter = Presenter::new(&display, drm_sys::fourcc::DRM_FORMAT_RGB565, 0xFF080808)
-        .expect("Failed creating presenter");
-
-    let mut renderer = Renderer::new();
+    let mut gfx = Gfx::new();
+    let gl_version = gfx.get_gl_version();
+    println!("OpenGL v{}.{}", gl_version.0, gl_version.1);
 
     let mut gui = imgui::Context::create();
     let mut gui_res = GuiRes::new(&mut gui.fonts());
@@ -128,8 +109,8 @@ fn main() {
 
         texture.bind();
 
-        renderer.draw(&nodes, &root, &na::Isometry3::identity());
-        renderer.present(&meshes, &nodes);
+        gfx.renderer.draw(&nodes, &root, &na::Isometry3::identity());
+        gfx.renderer.present(&meshes, &nodes);
 
         // Render GUI
         let ui = gui.frame();
@@ -144,10 +125,7 @@ fn main() {
         gui_res.draw(ui);
 
         // Present to the screen
-        context.swap_buffers();
-        let surface = context.surface_lock();
-        presenter.post(surface, 0, 0, 480, 320, 0, 0, 320, 480, 3);
-        context.surface_unlock(surface);
+        gfx.swap_buffers();
     }
 }
 

@@ -710,17 +710,6 @@ pub struct Renderer {
 
 impl Renderer {
     pub fn new() -> Renderer {
-        let (mut major, mut minor) = (0, 0);
-        unsafe {
-            gl::load_with(|symbol| {
-                go2::eglGetProcAddress(CString::new(symbol).unwrap().as_ptr()) as *const _
-            });
-
-            gl::GetIntegerv(gl::MAJOR_VERSION, &mut major);
-            gl::GetIntegerv(gl::MINOR_VERSION, &mut minor);
-        }
-        println!("OpenGL v{}.{}", major, minor);
-
         Renderer {
             meshes: HashMap::new(),
         }
@@ -779,5 +768,80 @@ impl Renderer {
         }
 
         self.meshes.clear();
+    }
+}
+
+pub struct Go2 {
+    display: go2::Display,
+    context: go2::Context,
+    presenter: go2::Presenter,
+}
+
+impl Go2 {
+    pub fn new() -> Self {
+        use go2::*;
+
+        // Initialize display, context, presenter, and gl symbols
+        let display = Display::new().expect("Failed creating display");
+
+        let attr = ContextAttributes {
+            major: 3,
+            minor: 2,
+            red_bits: 8,
+            green_bits: 8,
+            blue_bits: 8,
+            alpha_bits: 8,
+            depth_bits: 24,
+            stencil_bits: 0,
+        };
+
+        let context = Context::new(&display, 480, 320, &attr).expect("Failed creating context");
+        context.make_current();
+
+        let presenter = Presenter::new(&display, drm_sys::fourcc::DRM_FORMAT_RGB565, 0xFF080808)
+            .expect("Failed creating presenter");
+
+        unsafe {
+            gl::load_with(|symbol| {
+                go2::eglGetProcAddress(CString::new(symbol).unwrap().as_ptr()) as *const _
+            });
+        }
+
+        Self {
+            display,
+            context,
+            presenter,
+        }
+    }
+}
+
+pub struct Gfx {
+    go: Go2,
+    pub renderer: Renderer,
+}
+
+impl Gfx {
+    pub fn new() -> Self {
+        let go = Go2::new();
+        let renderer = Renderer::new();
+        Self { go, renderer }
+    }
+
+    pub fn get_gl_version(&self) -> (i32, i32) {
+        let (mut major, mut minor) = (0, 0);
+        unsafe {
+            gl::GetIntegerv(gl::MAJOR_VERSION, &mut major);
+            gl::GetIntegerv(gl::MINOR_VERSION, &mut minor);
+        }
+        (major, minor)
+    }
+
+    pub fn swap_buffers(&self) {
+        self.go.context.swap_buffers();
+        let surface = self.go.context.surface_lock();
+        self.go
+            .presenter
+            .post(surface, 0, 0, 480, 320, 0, 0, 320, 480, 3);
+        self.go.context.surface_unlock(surface);
     }
 }
