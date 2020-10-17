@@ -2,3 +2,4 @@ target
 res/img
 .vscode
 imgui.ini
+SDL2.*
