@@ -1,4 +1,4 @@
-#version 320 es
+#version 330 core
 
 out mediump vec4 out_color;
 

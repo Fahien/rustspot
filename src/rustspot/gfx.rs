@@ -489,7 +489,7 @@ impl GuiRes {
         fonts.tex_id = (font_texture.handle as usize).into();
 
         // Shaders
-        let vert_source = r#"#version 320 es
+        let vert_source = r#"#version 330 core
 
         layout (location = 0) in vec2 in_position;
         layout (location = 1) in vec2 in_tex_coords;
@@ -508,7 +508,7 @@ impl GuiRes {
         }
         "#;
 
-        let frag_source = r#"#version 320 es
+        let frag_source = r#"#version 330 core
         precision mediump float;
 
         in vec2 tex_coords;
@@ -783,12 +783,46 @@ impl Renderer {
     }
 }
 
+pub struct Video {
+    system: sdl2::VideoSubsystem,
+    window: sdl2::video::Window,
+    gl: sdl2::video::GLContext,
+}
+
+impl Video {
+    fn new(sdl: &sdl2::Sdl) -> Self {
+        let system = sdl.video().expect("Failed initializing video");
+
+        let attr = system.gl_attr();
+        attr.set_context_profile(sdl2::video::GLProfile::Core);
+        attr.set_context_version(3, 3);
+
+        let window = system
+            // TODO: pass these as parameters
+            .window("Test", 480, 320)
+            .opengl()
+            .position_centered()
+            .build()
+            .expect("Failed building window");
+
+        let gl = window
+            .gl_create_context()
+            .expect("Failed creating GL context");
+
+        gl::load_with(|symbol| system.gl_get_proc_address(symbol) as *const _);
+
+        Self { system, window, gl }
+    }
+}
+
+#[cfg(go2)]
 pub struct Go2 {
     display: go2::Display,
     context: go2::Context,
     presenter: go2::Presenter,
 }
 
+#[cfg(go2)]
 impl Go2 {
     pub fn new() -> Self {
         use go2::*;
@@ -828,15 +862,26 @@ impl Go2 {
 }
 
 pub struct Gfx {
+    #[cfg(go2)]
     go: Go2,
+    #[cfg(not(go))]
+    pub video: Video,
     pub renderer: Renderer,
 }
 
 impl Gfx {
+    #[cfg(go2)]
     pub fn new() -> Self {
         let go = Go2::new();
         let renderer = Renderer::new();
         Self { go, renderer }
+    }
+
+    #[cfg(not(go))]
+    pub fn new(sdl: &sdl2::Sdl) -> Self {
+        let video = Video::new(sdl);
+        let renderer = Renderer::new();
+        Self { video, renderer }
     }
 
     pub fn get_gl_version(&self) -> (i32, i32) {
@@ -849,11 +894,17 @@ impl Gfx {
     }
 
     pub fn swap_buffers(&self) {
-        self.go.context.swap_buffers();
-        let surface = self.go.context.surface_lock();
-        self.go
-            .presenter
-            .post(surface, 0, 0, 480, 320, 0, 0, 320, 480, 3);
-        self.go.context.surface_unlock(surface);
+        #[cfg(go2)]
+        {
+            self.go.context.swap_buffers();
+            let surface = self.go.context.surface_lock();
+            self.go
+                .presenter
+                .post(surface, 0, 0, 480, 320, 0, 0, 320, 480, 3);
+            self.go.context.surface_unlock(surface);
+        }
+
+        #[cfg(not(go2))]
+        self.video.window.gl_swap_window();
     }
 }
