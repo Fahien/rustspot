@@ -9,12 +9,11 @@ opt-level = 3
 
 [dependencies]
 libc = "0.2.79"
-drm-sys = "0.0.9"
 gl = "0.14.0"
 png = "0.16.7"
 nalgebra = "0.22.0"
 imgui = "0.5.0"
-go2 = { path = "../libgo2-rs" }
+sdl2 = "0.34.3"
 
 [lib]
 name = "rustspot"

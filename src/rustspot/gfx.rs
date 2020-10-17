@@ -788,60 +788,48 @@ impl Renderer {
     }
 }
 
-pub struct Go2 {
-    display: go2::Display,
-    context: go2::Context,
-    presenter: go2::Presenter,
+pub struct Video {
+    system: sdl2::VideoSubsystem,
+    window: sdl2::video::Window,
+    gl: sdl2::video::GLContext,
 }
 
-impl Go2 {
-    pub fn new() -> Self {
-        use go2::*;
+impl Video {
+    fn new(sdl: &sdl2::Sdl) -> Self {
+        let system = sdl.video().expect("Failed initializing video");
 
-        // Initialize display, context, presenter, and gl symbols
-        let display = Display::new().expect("Failed creating display");
+        let attr = system.gl_attr();
+        attr.set_context_profile(sdl2::video::GLProfile::GLES);
+        attr.set_context_version(3, 2);
 
-        let attr = ContextAttributes {
-            major: 3,
-            minor: 2,
-            red_bits: 8,
-            green_bits: 8,
-            blue_bits: 8,
-            alpha_bits: 8,
-            depth_bits: 24,
-            stencil_bits: 0,
-        };
+        let window = system
+            // TODO: pass these as parameters
+            .window("Test", 480, 320)
+            .opengl()
+            .position_centered()
+            .build()
+            .expect("Failed building window");
 
-        let context = Context::new(&display, 480, 320, &attr).expect("Failed creating context");
-        context.make_current();
+        let gl = window
+            .gl_create_context()
+            .expect("Failed creating GL context");
 
-        let presenter = Presenter::new(&display, drm_sys::fourcc::DRM_FORMAT_RGB565, 0xFF080808)
-            .expect("Failed creating presenter");
+        gl::load_with(|symbol| system.gl_get_proc_address(symbol) as *const _);
 
-        unsafe {
-            gl::load_with(|symbol| {
-                go2::eglGetProcAddress(CString::new(symbol).unwrap().as_ptr()) as *const _
-            });
-        }
-
-        Self {
-            display,
-            context,
-            presenter,
-        }
+        Self { system, window, gl }
     }
 }
 
 pub struct Gfx {
-    go: Go2,
+    pub video: Video,
     pub renderer: Renderer,
 }
 
 impl Gfx {
-    pub fn new() -> Self {
-        let go = Go2::new();
+    pub fn new(sdl: &sdl2::Sdl) -> Self {
+        let video = Video::new(sdl);
         let renderer = Renderer::new();
-        Self { go, renderer }
+        Self { video, renderer }
     }
 
     pub fn get_gl_version(&self) -> (i32, i32) {
@@ -854,11 +842,6 @@ impl Gfx {
     }
 
     pub fn swap_buffers(&self) {
-        self.go.context.swap_buffers();
-        let surface = self.go.context.surface_lock();
-        self.go
-            .presenter
-            .post(surface, 0, 0, 480, 320, 0, 0, 320, 480, 3);
-        self.go.context.surface_unlock(surface);
+        self.video.window.gl_swap_window();
     }
 }
