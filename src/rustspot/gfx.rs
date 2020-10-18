@@ -1,5 +1,8 @@
 use std::collections::HashMap;
 use std::ffi::CString;
+use std::fs::File;
+use std::io::Read;
+use std::path::Path;
 
 use nalgebra as na;
 
@@ -62,6 +65,26 @@ impl ShaderProgram {
             gl::LinkProgram(handle);
             ShaderProgram { handle }
         }
+    }
+
+    /// Returns a new shader program by loading vertex and fragment shaders files
+    pub fn open<P: AsRef<Path>>(vert: P, frag: P) -> ShaderProgram {
+        let mut vert_src = Vec::<u8>::new();
+        let mut frag_src = Vec::<u8>::new();
+
+        File::open(vert)
+            .expect("Failed to open vertex file")
+            .read_to_end(&mut vert_src)
+            .expect("Failed reading vertex file");
+        File::open(frag)
+            .expect("Failed to open fragment file")
+            .read_to_end(&mut frag_src)
+            .expect("Failed reading fragment file");
+
+        let vert = Shader::new(gl::VERTEX_SHADER, &vert_src).expect("Failed creating shader");
+        let frag = Shader::new(gl::FRAGMENT_SHADER, &frag_src).expect("Failed creating shader");
+
+        ShaderProgram::new(vert, frag)
     }
 
     pub fn enable(&self) {
