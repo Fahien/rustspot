@@ -491,6 +491,7 @@ pub struct Node {
     pub name: String,
     pub model: na::Isometry3<f32>,
     pub mesh: Handle<Mesh>,
+    pub camera: Handle<Camera>,
     pub children: Vec<Handle<Node>>,
 }
 
@@ -500,6 +501,7 @@ impl Node {
             name: String::new(),
             model: na::Isometry3::identity(),
             mesh: Handle::none(),
+            camera: Handle::none(),
             children: vec![],
         }
     }
@@ -527,6 +529,7 @@ pub struct Model {
     pub primitives: Pack<Primitive>,
     pub meshes: Pack<Mesh>,
     pub nodes: Pack<Node>,
+    pub cameras: Pack<Camera>,
 }
 
 impl Model {
@@ -538,6 +541,7 @@ impl Model {
             primitives: Pack::new(),
             meshes: Pack::new(),
             nodes: Pack::new(),
+            cameras: Pack::new(),
         }
     }
 }
@@ -786,6 +790,9 @@ pub struct Renderer {
     /// List of shader handles to bind with materials referring to them.
     shaders: HashMap<usize, Vec<usize>>,
 
+    /// List of camera handles to use while drawing the scene paired with the node to use
+    cameras: Vec<(Handle<Camera>, Handle<Node>)>,
+
     /// List of material handles to bind with primitives referring to them.
     materials: HashMap<usize, Vec<usize>>,
 
@@ -798,6 +805,7 @@ impl Renderer {
     pub fn new() -> Renderer {
         Renderer {
             shaders: HashMap::new(),
+            cameras: Vec::new(),
             materials: HashMap::new(),
             primitives: HashMap::new(),
         }
@@ -805,12 +813,20 @@ impl Renderer {
 
     /// Draw does not render immediately, instead it creates a list of mesh resources.
     /// At the same time it computes transform matrices for each node to be bound later on.
-    pub fn draw(&mut self, model: &Model, node: &Handle<Node>, transform: &na::Isometry3<f32>) {
+    pub fn draw(
+        &mut self,
+        model: &Model,
+        node_handle: &Handle<Node>,
+        transform: &na::Isometry3<f32>,
+    ) {
         // Precompute transform matrix
-        let temp_transform = transform * model.nodes[node.id].model;
+        let temp_transform = transform * model.nodes[node_handle.id].model;
+
+        // The current node
+        let node = model.nodes.get(&node_handle).unwrap();
 
         // Here we add this to a list of nodes that should be rendered
-        let mesh = &model.nodes[node.id].mesh;
+        let mesh = &node.mesh;
         if let Some(mesh) = model.meshes.get(&mesh) {
             for primitive_handle in mesh.primitives.iter() {
                 let primitive = model.primitives.get(&primitive_handle).unwrap();
@@ -844,21 +860,26 @@ impl Renderer {
                 // Get those nodes referring to this primitive
                 if let Some(primitive_nodes) = self.primitives.get_mut(&primitive_handle.id) {
                     // Add this nodes to the list of nodes associated to this primitive if not already there
-                    if !primitive_nodes.contains_key(&node.id) {
-                        primitive_nodes.insert(node.id, temp_transform.to_homogeneous());
+                    if !primitive_nodes.contains_key(&node_handle.id) {
+                        primitive_nodes.insert(node_handle.id, temp_transform.to_homogeneous());
                     }
                 } else {
                     // Create a new entry in the primitive resources
                     let mut primitive_nodes = HashMap::new();
-                    primitive_nodes.insert(node.id, temp_transform.to_homogeneous());
+                    primitive_nodes.insert(node_handle.id, temp_transform.to_homogeneous());
                     self.primitives.insert(primitive_handle.id, primitive_nodes);
                 }
             }
         }
 
+        // Here we check if the current node has a camera, just add it
+        if model.cameras.get(&node.camera).is_some() {
+            self.cameras.push((node.camera, *node_handle));
+        }
+
         // And all its children recursively
-        for child in model.nodes[node.id].children.iter() {
-            self.draw(&model, child, &temp_transform);
+        for child in node.children.iter() {
+            self.draw(model, child, &temp_transform);
         }
     }
 
@@ -879,29 +900,37 @@ impl Renderer {
             let shader = &model.programs[*shader_id];
             shader.enable();
 
-            // Need to bind materials for a group of primitives that use the same one
-            for material_id in material_ids.iter() {
-                let primitive_ids = &self.materials[material_id];
+            // Draw the scene from all the points of view
+            for (camera_handle, camera_node_handle) in self.cameras.iter() {
+                let camera = model.cameras.get(&camera_handle).unwrap();
+                let camera_node = model.nodes.get(&camera_node_handle).unwrap();
+                camera.bind(shader, camera_node);
 
-                let material = &model.materials[*material_id];
-                material.bind(&model.textures);
+                // Need to bind materials for a group of primitives that use the same one
+                for material_id in material_ids.iter() {
+                    let primitive_ids = &self.materials[material_id];
 
-                for primitive_id in primitive_ids.iter() {
-                    let primitive = &model.primitives[*primitive_id];
-                    assert!(primitive.material.valid());
+                    let material = &model.materials[*material_id];
+                    material.bind(&model.textures);
 
-                    // Bind the primitive, bind the nodes using that primitive, draw the primitive.
-                    primitive.bind();
-                    let node_res = &self.primitives[primitive_id];
-                    for (node_id, transform) in node_res.iter() {
-                        model.nodes[*node_id].bind(shader, &transform);
-                        primitive.draw();
+                    for primitive_id in primitive_ids.iter() {
+                        let primitive = &model.primitives[*primitive_id];
+                        assert!(primitive.material.valid());
+
+                        // Bind the primitive, bind the nodes using that primitive, draw the primitive.
+                        primitive.bind();
+                        let node_res = &self.primitives[primitive_id];
+                        for (node_id, transform) in node_res.iter() {
+                            model.nodes[*node_id].bind(shader, &transform);
+                            primitive.draw();
+                        }
                     }
                 }
             }
         }
 
         self.shaders.clear();
+        self.cameras.clear();
         self.materials.clear();
         self.primitives.clear();
     }
