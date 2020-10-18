@@ -179,12 +179,16 @@ impl Drop for Texture {
 }
 
 pub struct Material {
+    shader: Handle<ShaderProgram>,
     texture: Handle<Texture>,
 }
 
 impl Material {
     pub fn new(texture: Handle<Texture>) -> Self {
-        Self { texture }
+        Self {
+            shader: Handle::new(0),
+            texture,
+        }
     }
 
     pub fn bind(&self, textures: &Pack<Texture>) {
@@ -462,6 +466,7 @@ impl Camera {
     }
 
     pub fn bind(&self, program: &ShaderProgram, view: &Node) {
+        program.enable();
         let view_loc = program
             .get_uniform_location("view")
             .expect("Failed to get view uniform location");
@@ -512,6 +517,28 @@ impl Node {
 impl std::fmt::Debug for Node {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         write!(f, "Node {}", self.name)
+    }
+}
+
+pub struct Model {
+    pub programs: Pack<ShaderProgram>,
+    pub textures: Pack<Texture>,
+    pub materials: Pack<Material>,
+    pub primitives: Pack<Primitive>,
+    pub meshes: Pack<Mesh>,
+    pub nodes: Pack<Node>,
+}
+
+impl Model {
+    pub fn new() -> Self {
+        Self {
+            programs: Pack::new(),
+            textures: Pack::new(),
+            materials: Pack::new(),
+            primitives: Pack::new(),
+            meshes: Pack::new(),
+            nodes: Pack::new(),
+        }
     }
 }
 
@@ -756,6 +783,9 @@ pub fn gl_check() {
 }
 
 pub struct Renderer {
+    /// List of shader handles to bind with materials referring to them.
+    shaders: HashMap<usize, Vec<usize>>,
+
     /// List of material handles to bind with primitives referring to them.
     materials: HashMap<usize, Vec<usize>>,
 
@@ -767,6 +797,7 @@ pub struct Renderer {
 impl Renderer {
     pub fn new() -> Renderer {
         Renderer {
+            shaders: HashMap::new(),
             materials: HashMap::new(),
             primitives: HashMap::new(),
         }
@@ -774,40 +805,46 @@ impl Renderer {
 
     /// Draw does not render immediately, instead it creates a list of mesh resources.
     /// At the same time it computes transform matrices for each node to be bound later on.
-    pub fn draw(
-        &mut self,
-        primitives: &Pack<Primitive>,
-        meshes: &Pack<Mesh>,
-        nodes: &Pack<Node>,
-        node: &Handle<Node>,
-        transform: &na::Isometry3<f32>,
-    ) {
+    pub fn draw(&mut self, model: &Model, node: &Handle<Node>, transform: &na::Isometry3<f32>) {
         // Precompute transform matrix
-        let temp_transform = transform * nodes[node.id].model;
+        let temp_transform = transform * model.nodes[node.id].model;
 
         // Here we add this to a list of nodes that should be rendered
-        let mesh = &nodes[node.id].mesh;
-        if let Some(mesh) = meshes.get(&mesh) {
+        let mesh = &model.nodes[node.id].mesh;
+        if let Some(mesh) = model.meshes.get(&mesh) {
             for primitive_handle in mesh.primitives.iter() {
-                // Store this association material, primitive
-                if let Some(primitive) = primitives.get(&primitive_handle) {
-                    if primitive.material.valid() {
-                        let key = primitive.material.id;
-                        // Check if an entry already exists
-                        if let Some(material_primitives) = self.materials.get_mut(&key) {
-                            // Add this primitive id to the value list
-                            material_primitives.push(primitive_handle.id);
-                        } else {
-                            // Create a new entry (material, primitives)
-                            self.materials.insert(key, vec![primitive_handle.id]);
-                        }
+                let primitive = model.primitives.get(&primitive_handle).unwrap();
+                let material = model.materials.get(&primitive.material).unwrap();
+
+                // Store this association shader program, material
+                let key = material.shader.id;
+                if let Some(shader_materials) = self.shaders.get_mut(&key) {
+                    // Add this material id to the value list of not already there
+                    if !shader_materials.contains(&primitive.material.id) {
+                        shader_materials.push(primitive.material.id);
                     }
+                } else {
+                    // Create a new entry (shader, material)
+                    self.shaders.insert(key, vec![primitive.material.id]);
+                }
+
+                // Store this association material, primitive
+                let key = primitive.material.id;
+                // Check if an entry already exists
+                if let Some(material_primitives) = self.materials.get_mut(&key) {
+                    // Add this primitive id to the value list if not already there
+                    if !material_primitives.contains(&primitive_handle.id) {
+                        material_primitives.push(primitive_handle.id);
+                    }
+                } else {
+                    // Create a new entry (material, primitives)
+                    self.materials.insert(key, vec![primitive_handle.id]);
                 }
 
                 // Get those nodes referring to this primitive
                 if let Some(primitive_nodes) = self.primitives.get_mut(&primitive_handle.id) {
-                    if let None = primitive_nodes.get(&node.id) {
-                        // Add this nodes to the list of nodes associated to this primitive
+                    // Add this nodes to the list of nodes associated to this primitive if not already there
+                    if !primitive_nodes.contains_key(&node.id) {
                         primitive_nodes.insert(node.id, temp_transform.to_homogeneous());
                     }
                 } else {
@@ -820,20 +857,13 @@ impl Renderer {
         }
 
         // And all its children recursively
-        for child in nodes[node.id].children.iter() {
-            self.draw(primitives, meshes, nodes, child, &temp_transform);
+        for child in model.nodes[node.id].children.iter() {
+            self.draw(&model, child, &temp_transform);
         }
     }
 
     /// This should be called after drawing everything to trigger the actual GL rendering.
-    pub fn present(
-        &mut self,
-        program: &ShaderProgram,
-        textures: &Pack<Texture>,
-        materials: &Pack<Material>,
-        primitives: &Pack<Primitive>,
-        nodes: &Pack<Node>,
-    ) {
+    pub fn present(&mut self, model: &Model) {
         // Rendering should follow this approach
         // foreach prog in programs:
         //   bind(prog)
@@ -844,25 +874,34 @@ impl Renderer {
         //       foreach node in prim.nodes:
         //         bind(node) -> draw(prim)
 
-        // Need to bind materials for a group of primitives that use the same one
-        for (material_id, primitive_ids) in self.materials.iter() {
-            let material = &materials[*material_id];
-            material.bind(&textures);
+        // Need to bind programs one at a time
+        for (shader_id, material_ids) in self.shaders.iter() {
+            let shader = &model.programs[*shader_id];
+            shader.enable();
 
-            for primitive_id in primitive_ids.iter() {
-                let primitive = &primitives[*primitive_id];
-                assert!(primitive.material.valid());
+            // Need to bind materials for a group of primitives that use the same one
+            for material_id in material_ids.iter() {
+                let primitive_ids = &self.materials[material_id];
 
-                // Bind the primitive, bind the nodes using that primitive, draw the primitive.
-                primitive.bind();
-                let node_res = &self.primitives[primitive_id];
-                for (node_id, transform) in node_res.iter() {
-                    nodes[*node_id].bind(program, &transform);
-                    primitive.draw();
+                let material = &model.materials[*material_id];
+                material.bind(&model.textures);
+
+                for primitive_id in primitive_ids.iter() {
+                    let primitive = &model.primitives[*primitive_id];
+                    assert!(primitive.material.valid());
+
+                    // Bind the primitive, bind the nodes using that primitive, draw the primitive.
+                    primitive.bind();
+                    let node_res = &self.primitives[primitive_id];
+                    for (node_id, transform) in node_res.iter() {
+                        model.nodes[*node_id].bind(shader, &transform);
+                        primitive.draw();
+                    }
                 }
             }
         }
 
+        self.shaders.clear();
         self.materials.clear();
         self.primitives.clear();
     }

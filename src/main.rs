@@ -2,8 +2,6 @@
 // Author: Antonio Caggiano <info@antoniocaggiano.eu>
 // SPDX-License-Identifier: MIT
 
-use std::fs::File;
-
 use nalgebra as na;
 
 use rustspot::{gfx::*, util::*};
@@ -19,34 +17,26 @@ fn main() {
     let mut gui = imgui::Context::create();
     let mut gui_res = GuiRes::new(&mut gui.fonts());
 
+    let mut model = Model::new();
+
     // Shaders
-    let program = ShaderProgram::open("res/shader/vert.glsl", "res/shader/frag.glsl");
+    let program_handle = model.programs.push(ShaderProgram::open(
+        "res/shader/vert.glsl",
+        "res/shader/frag.glsl",
+    ));
 
-    // Store textures in a vector
-    let mut textures = Pack::new();
-    let texture = textures.push(Texture::open("res/img/lena.png"));
-
-    // Store materials in a vector
-    let mut materials = Pack::new();
+    let texture = model.textures.push(Texture::open("res/img/lena.png"));
 
     // Create a material with the previous texture
-    let material = materials.push(Material::new(texture));
-
-    // Store primitives in a vector
-    let mut primitives = Pack::new();
+    let material = model.materials.push(Material::new(texture));
 
     // Create a primitive quad with the previous material
-    let primitive = primitives.push(Primitive::quad(material));
+    let primitive = model.primitives.push(Primitive::quad(material));
 
     // Create a mesh with a primitive quad
     let mut mesh = Mesh::new(vec![primitive]);
     mesh.name = String::from("quad");
-
-    // Store mesh in a vector
-    let mut meshes = Pack::new();
-    let mesh = meshes.push(mesh);
-
-    let mut nodes = Pack::new();
+    let mesh = model.meshes.push(mesh);
 
     let camera = Camera::perspective();
 
@@ -55,7 +45,7 @@ fn main() {
     camera_node
         .model
         .append_translation_mut(&na::Translation3::new(0.0, 0.0, -1.0));
-    let camera_node = nodes.push(camera_node);
+    let camera_node = model.nodes.push(camera_node);
 
     let mut timer = Timer::new();
 
@@ -70,7 +60,7 @@ fn main() {
     left.model
         .append_translation_mut(&na::Translation3::new(-0.5, 0.0, 0.0));
     left.mesh = mesh;
-    root.children.push(nodes.push(left));
+    root.children.push(model.nodes.push(left));
 
     let mut right = Node::new();
     right.name = String::from("right");
@@ -78,10 +68,10 @@ fn main() {
         .model
         .append_translation_mut(&na::Translation3::new(0.5, 0.0, 0.0));
     right.mesh = mesh;
-    let right = nodes.push(right);
+    let right = model.nodes.push(right);
     root.children.push(right);
 
-    let root = nodes.push(root);
+    let root = model.nodes.push(root);
 
     'gameloop: loop {
         // Handle SDL2 events
@@ -107,7 +97,7 @@ fn main() {
         }
 
         let rot = na::UnitQuaternion::from_axis_angle(&na::Vector3::y_axis(), delta.as_secs_f32());
-        nodes
+        model.nodes
             .get_mut(&root)
             .unwrap()
             .model
@@ -126,19 +116,17 @@ fn main() {
             gl::Clear(gl::COLOR_BUFFER_BIT | gl::DEPTH_BUFFER_BIT);
         }
 
-        program.enable();
+        let program = program_handle.get(&model.programs).unwrap();
 
-        camera.bind(&program, nodes.get(&camera_node).unwrap());
+        camera.bind(&program, model.nodes.get(&camera_node).unwrap());
 
         gfx.renderer.draw(
-            &primitives,
-            &meshes,
-            &nodes,
+            &model,
             &root,
             &na::Isometry3::identity(),
         );
         gfx.renderer
-            .present(&program, &textures, &materials, &primitives, &nodes);
+            .present(&model);
 
         // Render GUI
         let ui = gui.frame();
