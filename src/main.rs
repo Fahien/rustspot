@@ -24,7 +24,7 @@ fn main() {
 
     // Store textures in a vector
     let mut textures = Pack::new();
-    let texture = textures.push(get_texture("res/img/lena.png"));
+    let texture = textures.push(Texture::open("res/img/lena.png"));
 
     // Store materials in a vector
     let mut materials = Pack::new();
@@ -155,19 +155,4 @@ fn main() {
         // Present to the screen
         gfx.swap_buffers();
     }
-}
-
-/// Loads a PNG image from a path and returns a new texture
-fn get_texture(path: &str) -> Texture {
-    let decoder = png::Decoder::new(File::open(path).expect("Failed to open png"));
-    let (info, mut reader) = decoder.read_info().expect("Failed reading png info");
-    println!("Png {}\n{:?}", path, info);
-    let mut data: Vec<u8> = vec![0; info.buffer_size()];
-    reader
-        .next_frame(data.as_mut_slice())
-        .expect("Failed to read png frame");
-
-    let mut texture = Texture::new();
-    texture.upload(info.width, info.height, &data);
-    texture
 }
