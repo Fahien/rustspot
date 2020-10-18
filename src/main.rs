@@ -3,7 +3,6 @@
 // SPDX-License-Identifier: MIT
 
 use std::fs::File;
-use std::io::Read;
 
 use nalgebra as na;
 
@@ -21,7 +20,7 @@ fn main() {
     let mut gui_res = GuiRes::new(&mut gui.fonts());
 
     // Shaders
-    let program = create_program("vert.glsl", "frag.glsl");
+    let program = ShaderProgram::open("res/shader/vert.glsl", "res/shader/frag.glsl");
 
     // Store textures in a vector
     let mut textures = Pack::new();
@@ -131,8 +130,15 @@ fn main() {
 
         camera.bind(&program, nodes.get(&camera_node).unwrap());
 
-        gfx.renderer.draw(&primitives, &meshes, &nodes, &root, &na::Isometry3::identity());
-        gfx.renderer.present(&program, &textures, &materials, &primitives, &nodes);
+        gfx.renderer.draw(
+            &primitives,
+            &meshes,
+            &nodes,
+            &root,
+            &na::Isometry3::identity(),
+        );
+        gfx.renderer
+            .present(&program, &textures, &materials, &primitives, &nodes);
 
         // Render GUI
         let ui = gui.frame();
@@ -149,24 +155,6 @@ fn main() {
         // Present to the screen
         gfx.swap_buffers();
     }
-}
-
-fn create_program(vert_path: &str, frag_path: &str) -> ShaderProgram {
-    let mut vert_src = Vec::<u8>::new();
-    let mut frag_src = Vec::<u8>::new();
-    File::open(format!("res/shader/{}", vert_path))
-        .expect("Failed to open vertex file")
-        .read_to_end(&mut vert_src)
-        .expect("Failed reading vertex file");
-    File::open(format!("res/shader/{}", frag_path))
-        .expect("Failed to open fragment file")
-        .read_to_end(&mut frag_src)
-        .expect("Failed reading fragment file");
-
-    let vert = Shader::new(gl::VERTEX_SHADER, &vert_src).expect("Failed creating shader");
-    let frag = Shader::new(gl::FRAGMENT_SHADER, &frag_src).expect("Failed creating shader");
-
-    ShaderProgram::new(vert, frag)
 }
 
 /// Loads a PNG image from a path and returns a new texture
