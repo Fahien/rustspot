@@ -124,6 +124,22 @@ impl Texture {
         Texture { handle }
     }
 
+    /// Loads a PNG image from a path and returns a new texture
+    pub fn open<P: AsRef<Path>>(path: P) -> Texture {
+        let str_path = path.as_ref().to_str().unwrap();
+        let message = format!("Failed to open: {}", str_path);
+        let decoder = png::Decoder::new(File::open(path).expect(&message));
+        let (info, mut reader) = decoder.read_info().expect("Failed reading png info");
+        let mut data: Vec<u8> = vec![0; info.buffer_size()];
+        reader
+            .next_frame(data.as_mut_slice())
+            .expect("Failed to read png frame");
+
+        let mut texture = Texture::new();
+        texture.upload(info.width, info.height, &data);
+        texture
+    }
+
     pub fn bind(&self) {
         unsafe { gl::BindTexture(gl::TEXTURE_2D, self.handle) };
     }
