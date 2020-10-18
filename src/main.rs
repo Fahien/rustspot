@@ -17,61 +17,12 @@ fn main() {
     let mut gui = imgui::Context::create();
     let mut gui_res = GuiRes::new(&mut gui.fonts());
 
-    let mut model = Model::new();
-
-    // Shaders
-    let program_handle = model.programs.push(ShaderProgram::open(
-        "res/shader/vert.glsl",
-        "res/shader/frag.glsl",
-    ));
-
-    let texture = model.textures.push(Texture::open("res/img/lena.png"));
-
-    // Create a material with the previous texture
-    let material = model.materials.push(Material::new(texture));
-
-    // Create a primitive quad with the previous material
-    let primitive = model.primitives.push(Primitive::quad(material));
-
-    // Create a mesh with a primitive quad
-    let mut mesh = Mesh::new(vec![primitive]);
-    mesh.name = String::from("quad");
-    let mesh = model.meshes.push(mesh);
-
-    let camera = Camera::perspective();
-
-    let mut camera_node = Node::new();
-    camera_node.name = String::from("camera");
-    camera_node
-        .model
-        .append_translation_mut(&na::Translation3::new(0.0, 0.0, -1.0));
-    let camera_node = model.nodes.push(camera_node);
+    let (mut model, root) = create_model();
 
     let mut timer = Timer::new();
 
     let mut step = 0.5;
     let mut red = 0.0;
-
-    let mut root = Node::new();
-    root.name = String::from("root");
-
-    let mut left = Node::new();
-    left.name = String::from("left");
-    left.model
-        .append_translation_mut(&na::Translation3::new(-0.5, 0.0, 0.0));
-    left.mesh = mesh;
-    root.children.push(model.nodes.push(left));
-
-    let mut right = Node::new();
-    right.name = String::from("right");
-    right
-        .model
-        .append_translation_mut(&na::Translation3::new(0.5, 0.0, 0.0));
-    right.mesh = mesh;
-    let right = model.nodes.push(right);
-    root.children.push(right);
-
-    let root = model.nodes.push(root);
 
     'gameloop: loop {
         // Handle SDL2 events
@@ -97,7 +48,8 @@ fn main() {
         }
 
         let rot = na::UnitQuaternion::from_axis_angle(&na::Vector3::y_axis(), delta.as_secs_f32());
-        model.nodes
+        model
+            .nodes
             .get_mut(&root)
             .unwrap()
             .model
@@ -116,17 +68,8 @@ fn main() {
             gl::Clear(gl::COLOR_BUFFER_BIT | gl::DEPTH_BUFFER_BIT);
         }
 
-        let program = program_handle.get(&model.programs).unwrap();
-
-        camera.bind(&program, model.nodes.get(&camera_node).unwrap());
-
-        gfx.renderer.draw(
-            &model,
-            &root,
-            &na::Isometry3::identity(),
-        );
-        gfx.renderer
-            .present(&model);
+        gfx.renderer.draw(&model, &root, &na::Isometry3::identity());
+        gfx.renderer.present(&model);
 
         // Render GUI
         let ui = gui.frame();
@@ -143,4 +86,61 @@ fn main() {
         // Present to the screen
         gfx.swap_buffers();
     }
+}
+
+fn create_model() -> (Model, Handle<Node>) {
+    let mut model = Model::new();
+
+    // Shaders
+    model.programs.push(ShaderProgram::open(
+        "res/shader/vert.glsl",
+        "res/shader/frag.glsl",
+    ));
+
+    let texture = model.textures.push(Texture::open("res/img/lena.png"));
+
+    // Create a material with the previous texture
+    let material = model.materials.push(Material::new(texture));
+
+    // Create a primitive quad with the previous material
+    let primitive = model.primitives.push(Primitive::quad(material));
+
+    // Create a mesh with a primitive quad
+    let mut mesh = Mesh::new(vec![primitive]);
+    mesh.name = String::from("quad");
+    let mesh = model.meshes.push(mesh);
+
+    let mut root = Node::new();
+    root.name = String::from("root");
+
+    let camera = model.cameras.push(Camera::perspective());
+
+    let mut camera_node = Node::new();
+    camera_node.name = String::from("camera");
+    camera_node.camera = camera;
+    camera_node
+        .model
+        .append_translation_mut(&na::Translation3::new(0.0, 0.0, -1.0));
+    let camera_node = model.nodes.push(camera_node);
+    root.children.push(camera_node);
+
+    let mut left = Node::new();
+    left.name = String::from("left");
+    left.model
+        .append_translation_mut(&na::Translation3::new(-0.5, 0.0, 0.0));
+    left.mesh = mesh;
+    root.children.push(model.nodes.push(left));
+
+    let mut right = Node::new();
+    right.name = String::from("right");
+    right
+        .model
+        .append_translation_mut(&na::Translation3::new(0.5, 0.0, 0.0));
+    right.mesh = mesh;
+    let right = model.nodes.push(right);
+    root.children.push(right);
+
+    let root = model.nodes.push(root);
+
+    (model, root)
 }
