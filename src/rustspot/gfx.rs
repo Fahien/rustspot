@@ -179,7 +179,7 @@ impl Drop for Texture {
 }
 
 pub struct Material {
-    shader: Handle<ShaderProgram>,
+    pub shader: Handle<ShaderProgram>,
     texture: Handle<Texture>,
 }
 
@@ -899,6 +899,7 @@ impl Renderer {
         for (shader_id, material_ids) in self.shaders.iter() {
             let shader = &model.programs[*shader_id];
             shader.enable();
+            let node_uniform = shader.get_uniform_location("node_id").unwrap_or(-1);
 
             // Draw the scene from all the points of view
             for (camera_handle, camera_node_handle) in self.cameras.iter() {
@@ -921,6 +922,10 @@ impl Renderer {
                         primitive.bind();
                         let node_res = &self.primitives[primitive_id];
                         for (node_id, transform) in node_res.iter() {
+                            unsafe {
+                                gl::Uniform1i(node_uniform, *node_id as i32);
+                            }
+
                             model.nodes[*node_id].bind(shader, &transform);
                             primitive.draw();
                         }

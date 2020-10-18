@@ -47,7 +47,8 @@ fn main() {
             step = -step;
         }
 
-        let rot = na::UnitQuaternion::from_axis_angle(&na::Vector3::y_axis(), delta.as_secs_f32());
+        let rot =
+            na::UnitQuaternion::from_axis_angle(&na::Vector3::y_axis(), delta.as_secs_f32() / 2.0);
         model
             .nodes
             .get_mut(&root)
@@ -97,18 +98,32 @@ fn create_model() -> (Model, Handle<Node>) {
         "res/shader/frag.glsl",
     ));
 
+    let fancy_shader = model.programs.push(ShaderProgram::open(
+        "res/shader/custom/fancy.vert.glsl",
+        "res/shader/custom/fancy.frag.glsl",
+    ));
+
     let texture = model.textures.push(Texture::open("res/img/lena.png"));
 
     // Create a material with the previous texture
     let material = model.materials.push(Material::new(texture));
 
+    // Create a fancy material
+    let mut fancy_material = Material::new(texture);
+    fancy_material.shader = fancy_shader;
+    let fancy_material = model.materials.push(fancy_material);
+
     // Create a primitive quad with the previous material
     let primitive = model.primitives.push(Primitive::quad(material));
+    let fancy_primitive = model.primitives.push(Primitive::quad(fancy_material));
 
     // Create a mesh with a primitive quad
     let mut mesh = Mesh::new(vec![primitive]);
     mesh.name = String::from("quad");
     let mesh = model.meshes.push(mesh);
+
+    // Create a fancy mesh
+    let fancy_mesh = model.meshes.push(Mesh::new(vec![fancy_primitive]));
 
     let mut root = Node::new();
     root.name = String::from("root");
@@ -120,25 +135,44 @@ fn create_model() -> (Model, Handle<Node>) {
     camera_node.camera = camera;
     camera_node
         .model
-        .append_translation_mut(&na::Translation3::new(0.0, 0.0, -1.0));
+        .append_translation_mut(&na::Translation3::new(0.0, 0.0, 2.5));
     let camera_node = model.nodes.push(camera_node);
     root.children.push(camera_node);
 
-    let mut left = Node::new();
-    left.name = String::from("left");
-    left.model
-        .append_translation_mut(&na::Translation3::new(-0.5, 0.0, 0.0));
-    left.mesh = mesh;
-    root.children.push(model.nodes.push(left));
-
-    let mut right = Node::new();
-    right.name = String::from("right");
-    right
+    let mut top_left = Node::new();
+    top_left.name = String::from("top_left");
+    top_left
         .model
-        .append_translation_mut(&na::Translation3::new(0.5, 0.0, 0.0));
-    right.mesh = mesh;
-    let right = model.nodes.push(right);
-    root.children.push(right);
+        .append_translation_mut(&na::Translation3::new(-0.5, 0.5, 0.0));
+    top_left.mesh = mesh;
+    root.children.push(model.nodes.push(top_left));
+
+    let mut top_right = Node::new();
+    top_right.name = String::from("top_right");
+    top_right
+        .model
+        .append_translation_mut(&na::Translation3::new(0.5, 0.5, 0.0));
+    top_right.mesh = fancy_mesh;
+    let top_right = model.nodes.push(top_right);
+    root.children.push(top_right);
+
+    let mut bottom_right = Node::new();
+    bottom_right.name = String::from("bottom_right");
+    bottom_right
+        .model
+        .append_translation_mut(&na::Translation3::new(0.5, -0.5, 0.0));
+    bottom_right.mesh = fancy_mesh;
+    let bottom_right = model.nodes.push(bottom_right);
+    root.children.push(bottom_right);
+
+    let mut bottom_left = Node::new();
+    bottom_left.name = String::from("bottom_left");
+    bottom_left
+        .model
+        .append_translation_mut(&na::Translation3::new(-0.5, -0.5, 0.0));
+    bottom_left.mesh = fancy_mesh;
+    let bottom_left = model.nodes.push(bottom_left);
+    root.children.push(bottom_left);
 
     let root = model.nodes.push(root);
 
