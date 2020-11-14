@@ -123,6 +123,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "go2"
+version = "0.1.0"
+source = "git+https://github.com/fahien/libgo2-rs?branch=main#26f77c272372bccd0cf1d00a3bbf0a8a42f01654"
+dependencies = [
+ "libc",
+]
+
+[[package]]
 name = "imgui"
 version = "0.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -401,6 +409,7 @@ version = "0.1.0"
 dependencies = [
  "drm-sys",
  "gl",
+ "go2",
  "imgui",
  "libc",
  "nalgebra",

@@ -4,14 +4,18 @@ version = "0.1.0"
 authors = ["Antonio Caggiano <info@antoniocaggiano.eu>"]
 edition = "2018"
 
+[features]
+go = ["drm-sys", "go2"]
+
 [dependencies]
-libc = "0.2.79"
-drm-sys = "0.0.9"
 gl = "0.14.0"
 png = "0.16.7"
 nalgebra = "0.22.0"
 imgui = "0.5.0"
 sdl2 = "0.34.3"
+libc = "0.2.79"
+drm-sys = { version = "0.0.9", optional = true }
+go2 = { git = "https://github.com/fahien/libgo2-rs", optional = true, branch = "main" }
 
 [lib]
 name = "rustspot"

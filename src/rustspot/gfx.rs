@@ -126,7 +126,9 @@ impl Texture {
 
     /// Loads a PNG image from a path and returns a new texture
     pub fn open<P: AsRef<Path>>(path: P) -> Texture {
-        let decoder = png::Decoder::new(File::open(path).expect("Failed to open png"));
+        let str_path = path.as_ref().to_str().unwrap();
+        let message = format!("Failed to open: {}", str_path);
+        let decoder = png::Decoder::new(File::open(path).expect(&message));
         let (info, mut reader) = decoder.read_info().expect("Failed reading png info");
         let mut data: Vec<u8> = vec![0; info.buffer_size()];
         reader

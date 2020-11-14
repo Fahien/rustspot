@@ -2,3 +2,5 @@ target
 res
 .vscode
 imgui.ini
+Cargo.lock
+SDL2.*
