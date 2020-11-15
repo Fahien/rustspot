@@ -69,7 +69,7 @@ fn main() {
             gl::Clear(gl::COLOR_BUFFER_BIT | gl::DEPTH_BUFFER_BIT);
         }
 
-        gfx.renderer.draw(&model, &root, &na::Isometry3::identity());
+        gfx.renderer.draw(&model, &root, &na::Matrix4::identity());
         gfx.renderer.present(&model);
 
         // Render GUI

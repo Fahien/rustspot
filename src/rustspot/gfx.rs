@@ -124,6 +124,13 @@ impl Texture {
         Texture { handle }
     }
 
+    /// Creates a one pixel texture with the RGBA color passed as argument
+    pub fn pixel(data: &[u8; 4]) -> Self {
+        let mut texture = Self::new();
+        texture.upload(1, 1, data);
+        texture
+    }
+
     /// Loads a PNG image from a path and returns a new texture
     pub fn open<P: AsRef<Path>>(path: P) -> Texture {
         let str_path = path.as_ref().to_str().unwrap();
@@ -490,6 +497,7 @@ impl Camera {
 pub struct Node {
     pub name: String,
     pub model: na::Isometry3<f32>,
+    pub scale: na::Vector3<f32>,
     pub mesh: Handle<Mesh>,
     pub camera: Handle<Camera>,
     pub children: Vec<Handle<Node>>,
@@ -500,6 +508,7 @@ impl Node {
         Node {
             name: String::new(),
             model: na::Isometry3::identity(),
+            scale: na::Vector3::new(1.0, 1.0, 1.0),
             mesh: Handle::none(),
             camera: Handle::none(),
             children: vec![],
@@ -817,10 +826,13 @@ impl Renderer {
         &mut self,
         model: &Model,
         node_handle: &Handle<Node>,
-        transform: &na::Isometry3<f32>,
+        transform: &na::Matrix4<f32>,
     ) {
         // Precompute transform matrix
-        let temp_transform = transform * model.nodes[node_handle.id].model;
+        let node = &model.nodes[node_handle.id];
+        let temp_transform = transform * node.model.to_homogeneous();
+        let temp_transform = temp_transform
+            .prepend_nonuniform_scaling(&node.scale);
 
         // The current node
         let node = model.nodes.get(&node_handle).unwrap();
@@ -861,12 +873,12 @@ impl Renderer {
                 if let Some(primitive_nodes) = self.primitives.get_mut(&primitive_handle.id) {
                     // Add this nodes to the list of nodes associated to this primitive if not already there
                     if !primitive_nodes.contains_key(&node_handle.id) {
-                        primitive_nodes.insert(node_handle.id, temp_transform.to_homogeneous());
+                        primitive_nodes.insert(node_handle.id, temp_transform);
                     }
                 } else {
                     // Create a new entry in the primitive resources
                     let mut primitive_nodes = HashMap::new();
-                    primitive_nodes.insert(node_handle.id, temp_transform.to_homogeneous());
+                    primitive_nodes.insert(node_handle.id, temp_transform);
                     self.primitives.insert(primitive_handle.id, primitive_nodes);
                 }
             }

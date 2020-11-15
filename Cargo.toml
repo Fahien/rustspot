@@ -20,5 +20,9 @@ name = "rustspot"
 path = "src/rustspot/lib.rs"
 
 [[bin]]
-name = "rustspot-test"
-path = "src/main.rs"
+name = "1-hello"
+path = "src/demo/1-hello.rs"
+
+[[bin]]
+name = "2-rainbow"
+path = "src/demo/2-rainbow.rs"
