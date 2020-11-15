@@ -88,10 +88,16 @@ impl<T> Pack<T> {
     }
 
     pub fn get(&self, handle: &Handle<T>) -> Option<&T> {
+        if !handle.valid() {
+            return None
+        }
         self.vec.get(self.get_vec_index(handle))
     }
 
     pub fn get_mut(&mut self, handle: &Handle<T>) -> Option<&mut T> {
+        if !handle.valid() {
+            return None
+        }
         let vec_index = self.get_vec_index(&handle);
         self.vec.get_mut(vec_index)
     }
