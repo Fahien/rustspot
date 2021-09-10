@@ -49,12 +49,7 @@ fn main() {
 
         let rot =
             na::UnitQuaternion::from_axis_angle(&na::Vector3::y_axis(), delta.as_secs_f32() / 2.0);
-        model
-            .nodes
-            .get_mut(&root)
-            .unwrap()
-            .model
-            .append_rotation_mut(&rot);
+        model.nodes.get_mut(&root).unwrap().trs.rotate(&rot);
 
         // Render something
         unsafe {
@@ -133,43 +128,33 @@ fn create_model() -> (Model, Handle<Node>) {
     let mut camera_node = Node::new();
     camera_node.name = String::from("camera");
     camera_node.camera = camera;
-    camera_node
-        .model
-        .append_translation_mut(&na::Translation3::new(0.0, 0.0, 2.5));
+    camera_node.trs.translate(0.0, 0.0, 2.5);
     let camera_node = model.nodes.push(camera_node);
     root.children.push(camera_node);
 
     let mut top_left = Node::new();
     top_left.name = String::from("top_left");
-    top_left
-        .model
-        .append_translation_mut(&na::Translation3::new(-0.5, 0.5, 0.0));
+    top_left.trs.translate(-0.5, 0.5, 0.0);
     top_left.mesh = mesh;
     root.children.push(model.nodes.push(top_left));
 
     let mut top_right = Node::new();
     top_right.name = String::from("top_right");
-    top_right
-        .model
-        .append_translation_mut(&na::Translation3::new(0.5, 0.5, 0.0));
+    top_right.trs.translate(0.5, 0.5, 0.0);
     top_right.mesh = fancy_mesh;
     let top_right = model.nodes.push(top_right);
     root.children.push(top_right);
 
     let mut bottom_right = Node::new();
     bottom_right.name = String::from("bottom_right");
-    bottom_right
-        .model
-        .append_translation_mut(&na::Translation3::new(0.5, -0.5, 0.0));
+    bottom_right.trs.translate(0.5, -0.5, 0.0);
     bottom_right.mesh = fancy_mesh;
     let bottom_right = model.nodes.push(bottom_right);
     root.children.push(bottom_right);
 
     let mut bottom_left = Node::new();
     bottom_left.name = String::from("bottom_left");
-    bottom_left
-        .model
-        .append_translation_mut(&na::Translation3::new(-0.5, -0.5, 0.0));
+    bottom_left.trs.translate(-0.5, -0.5, 0.0);
     bottom_left.mesh = fancy_mesh;
     let bottom_left = model.nodes.push(bottom_left);
     root.children.push(bottom_left);
