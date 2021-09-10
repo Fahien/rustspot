@@ -49,12 +49,7 @@ fn main() {
 
         let rot =
             na::UnitQuaternion::from_axis_angle(&na::Vector3::y_axis(), delta.as_secs_f32() / 2.0);
-        model
-            .nodes
-            .get_mut(&root)
-            .unwrap()
-            .model
-            .append_rotation_mut(&rot);
+        model.nodes.get_mut(&root).unwrap().trs.rotate(&rot);
 
         // Render something
         unsafe {
@@ -106,7 +101,7 @@ fn create_model() -> (Model, Handle<Node>) {
         model.textures.push(Texture::pixel(&[170, 221, 84, 255])), // green
         model.textures.push(Texture::pixel(&[145, 209, 125, 255])),
         model.textures.push(Texture::pixel(&[106, 174, 185, 255])), // cyan
-        model.textures.push(Texture::pixel(&[87, 137, 210, 255])), // blue
+        model.textures.push(Texture::pixel(&[87, 137, 210, 255])),  // blue
         model.textures.push(Texture::pixel(&[103, 114, 194, 255])),
         model.textures.push(Texture::pixel(&[110, 95, 162, 255])), // purple
         model.textures.push(Texture::pixel(&[128, 102, 149, 255])),
@@ -115,7 +110,7 @@ fn create_model() -> (Model, Handle<Node>) {
         model.textures.push(Texture::pixel(&[224, 138, 3, 255])), // orange
         model.textures.push(Texture::pixel(&[236, 195, 79, 255])),
     ];
-    
+
     // Create a material with the previous texture
     let mut materials = vec![];
     for texture in color_textures {
@@ -143,9 +138,7 @@ fn create_model() -> (Model, Handle<Node>) {
     let mut camera_node = Node::new();
     camera_node.name = String::from("camera");
     camera_node.camera = camera;
-    camera_node
-        .model
-        .append_translation_mut(&na::Translation3::new(0.0, 0.0, -8.0));
+    camera_node.trs.translate(0.0, 0.0, 8.0);
     let camera_node = model.nodes.push(camera_node);
     root.children.push(camera_node);
 
@@ -154,8 +147,8 @@ fn create_model() -> (Model, Handle<Node>) {
         let mut node = Node::new();
 
         node.name = format!("column{}", i);
-        node.model.append_translation_mut(&na::Translation3::new(i as f32, 0.0, 0.0));
-        node.scale = na::Vector3::new(1.0, 8.0, 1.0);
+        node.trs.translate(i as f32, 0.0, 0.0);
+        node.trs.scale(1.0, 8.0, 1.0);
         node.mesh = meshes[(i + 6) as usize];
 
         root.children.push(model.nodes.push(node));

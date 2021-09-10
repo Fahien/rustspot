@@ -486,7 +486,7 @@ impl Camera {
                 view_loc,
                 1,
                 gl::FALSE,
-                view.model.inverse().to_homogeneous().as_ptr(),
+                view.trs.isometry.inverse().to_homogeneous().as_ptr(),
             );
 
             gl::UniformMatrix4fv(proj_loc, 1, gl::FALSE, self.proj.as_ptr());
@@ -494,10 +494,44 @@ impl Camera {
     }
 }
 
+pub struct Trs {
+    isometry: na::Isometry3<f32>,
+    scale: na::Vector3<f32>,
+}
+
+impl Trs {
+    pub fn new() -> Self {
+        Self {
+            isometry: na::Isometry3::identity(),
+            scale: na::Vector3::new(1.0, 1.0, 1.0),
+        }
+    }
+
+    pub fn get_matrix(&self) -> na::Matrix4<f32> {
+        self.isometry
+            .to_homogeneous()
+            .prepend_nonuniform_scaling(&self.scale)
+    }
+
+    pub fn rotate(&mut self, rotation: &na::Unit<na::Quaternion<f32>>) {
+        self.isometry.append_rotation_mut(&rotation);
+    }
+
+    pub fn translate(&mut self, x: f32, y: f32, z: f32) {
+        self.isometry
+            .append_translation_mut(&na::Translation3::new(x, y, z));
+    }
+
+    pub fn scale(&mut self, x: f32, y: f32, z: f32) {
+        self.scale.x *= x;
+        self.scale.y *= y;
+        self.scale.z *= z;
+    }
+}
+
 pub struct Node {
     pub name: String,
-    pub model: na::Isometry3<f32>,
-    pub scale: na::Vector3<f32>,
+    pub trs: Trs,
     pub mesh: Handle<Mesh>,
     pub camera: Handle<Camera>,
     pub children: Vec<Handle<Node>>,
@@ -507,8 +541,7 @@ impl Node {
     pub fn new() -> Self {
         Node {
             name: String::new(),
-            model: na::Isometry3::identity(),
-            scale: na::Vector3::new(1.0, 1.0, 1.0),
+            trs: Trs::new(),
             mesh: Handle::none(),
             camera: Handle::none(),
             children: vec![],
@@ -830,9 +863,7 @@ impl Renderer {
     ) {
         // Precompute transform matrix
         let node = &model.nodes[node_handle.id];
-        let temp_transform = transform * node.model.to_homogeneous();
-        let temp_transform = temp_transform
-            .prepend_nonuniform_scaling(&node.scale);
+        let temp_transform = transform * node.trs.get_matrix();
 
         // The current node
         let node = model.nodes.get(&node_handle).unwrap();
