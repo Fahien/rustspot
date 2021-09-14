@@ -13,11 +13,26 @@ pub struct Shader {
 }
 
 impl Shader {
-    pub fn new(shader_type: gl::types::GLenum, src: &[u8]) -> Option<Shader> {
+    pub fn new(
+        profile: sdl2::video::GLProfile,
+        shader_type: gl::types::GLenum,
+        src: &[u8],
+    ) -> Option<Shader> {
         unsafe {
+            let version = if profile == sdl2::video::GLProfile::Core {
+                "#version 330 core\n"
+            } else {
+                "#version 320 es\n"
+            };
+
             let handle = gl::CreateShader(shader_type);
+
+            let c_version = CString::new(version).unwrap();
             let c_src = CString::new(src).unwrap();
-            gl::ShaderSource(handle, 1, &c_src.as_ptr(), std::ptr::null());
+
+            let src_vec = vec![c_version.as_ptr(), c_src.as_ptr()];
+            let lengths: Vec<gl::types::GLint> = vec![version.len() as i32, src.len() as i32];
+            gl::ShaderSource(handle, 2, src_vec.as_ptr(), lengths.as_ptr());
             gl::CompileShader(handle);
 
             // Check error compiling shader
@@ -68,7 +83,11 @@ impl ShaderProgram {
     }
 
     /// Returns a new shader program by loading vertex and fragment shaders files
-    pub fn open<P: AsRef<Path>>(vert: P, frag: P) -> ShaderProgram {
+    pub fn open<P: AsRef<Path>>(
+        profile: sdl2::video::GLProfile,
+        vert: P,
+        frag: P,
+    ) -> ShaderProgram {
         let mut vert_src = Vec::<u8>::new();
         let mut frag_src = Vec::<u8>::new();
 
@@ -81,8 +100,10 @@ impl ShaderProgram {
             .read_to_end(&mut frag_src)
             .expect("Failed reading fragment file");
 
-        let vert = Shader::new(gl::VERTEX_SHADER, &vert_src).expect("Failed creating shader");
-        let frag = Shader::new(gl::FRAGMENT_SHADER, &frag_src).expect("Failed creating shader");
+        let vert =
+            Shader::new(profile, gl::VERTEX_SHADER, &vert_src).expect("Failed creating shader");
+        let frag =
+            Shader::new(profile, gl::FRAGMENT_SHADER, &frag_src).expect("Failed creating shader");
 
         ShaderProgram::new(vert, frag)
     }
@@ -595,7 +616,7 @@ pub struct GuiRes {
 }
 
 impl GuiRes {
-    pub fn new(fonts: &mut imgui::FontAtlasRefMut) -> Self {
+    pub fn new(profile: sdl2::video::GLProfile, fonts: &mut imgui::FontAtlasRefMut) -> Self {
         // Font
         let mut font_texture = Texture::new();
         let texture = fonts.build_rgba32_texture();
@@ -603,8 +624,7 @@ impl GuiRes {
         fonts.tex_id = (font_texture.handle as usize).into();
 
         // Shaders
-        let vert_source = r#"#version 320 es
-
+        let vert_source = r#"
         layout (location = 0) in vec2 in_position;
         layout (location = 1) in vec2 in_tex_coords;
         layout (location = 2) in vec4 in_color;
@@ -622,7 +642,7 @@ impl GuiRes {
         }
         "#;
 
-        let frag_source = r#"#version 320 es
+        let frag_source = r#"
         precision mediump float;
 
         in vec2 tex_coords;
@@ -638,9 +658,9 @@ impl GuiRes {
         }
         "#;
 
-        let vert = Shader::new(gl::VERTEX_SHADER, vert_source.as_bytes())
+        let vert = Shader::new(profile, gl::VERTEX_SHADER, vert_source.as_bytes())
             .expect("Failed to create imgui vertex shader");
-        let frag = Shader::new(gl::FRAGMENT_SHADER, frag_source.as_bytes())
+        let frag = Shader::new(profile, gl::FRAGMENT_SHADER, frag_source.as_bytes())
             .expect("Failed to create imgui fragment shader");
 
         let program = ShaderProgram::new(vert, frag);
@@ -987,6 +1007,7 @@ impl Renderer {
 pub struct Video {
     system: sdl2::VideoSubsystem,
     window: sdl2::video::Window,
+    pub profile: sdl2::video::GLProfile,
     gl: sdl2::video::GLContext,
 }
 
@@ -995,16 +1016,31 @@ impl Video {
         let system = sdl.video().expect("Failed initializing video");
 
         let attr = system.gl_attr();
-        attr.set_context_profile(sdl2::video::GLProfile::GLES);
+        let mut profile = sdl2::video::GLProfile::GLES;
+        attr.set_context_profile(profile);
         attr.set_context_version(3, 2);
 
-        let window = system
+        let window = match system
             // TODO: pass these as parameters
             .window("Test", 480, 320)
             .opengl()
             .position_centered()
             .build()
-            .expect("Failed building window");
+        {
+            Ok(w) => w,
+            Err(_) => {
+                println!("Failed initializing GLES profile, trying Core");
+                profile = sdl2::video::GLProfile::Core;
+                attr.set_context_profile(profile);
+                attr.set_context_version(3, 3);
+                system
+                    .window("Test", 480, 320)
+                    .opengl()
+                    .position_centered()
+                    .build()
+                    .expect("Failed building window")
+            }
+        };
 
         let gl = window
             .gl_create_context()
@@ -1012,7 +1048,12 @@ impl Video {
 
         gl::load_with(|symbol| system.gl_get_proc_address(symbol) as *const _);
 
-        Self { system, window, gl }
+        Self {
+            system,
+            window,
+            profile,
+            gl,
+        }
     }
 }
 

@@ -15,9 +15,9 @@ fn main() {
     println!("OpenGL v{}.{}", gl_version.0, gl_version.1);
 
     let mut gui = imgui::Context::create();
-    let mut gui_res = GuiRes::new(&mut gui.fonts());
+    let mut gui_res = GuiRes::new(gfx.video.profile, &mut gui.fonts());
 
-    let (mut model, root) = create_model();
+    let (mut model, root) = create_model(gfx.video.profile);
 
     let mut timer = Timer::new();
 
@@ -87,11 +87,12 @@ fn main() {
     }
 }
 
-fn create_model() -> (Model, Handle<Node>) {
+fn create_model(profile: sdl2::video::GLProfile) -> (Model, Handle<Node>) {
     let mut model = Model::new();
 
     // Shaders
     model.programs.push(ShaderProgram::open(
+        profile,
         "res/shader/vert.glsl",
         "res/shader/frag.glsl",
     ));

@@ -1,5 +1,3 @@
-#version 320 es
-
 precision mediump float;
 
 out mediump vec4 out_color;
