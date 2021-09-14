@@ -1,5 +1,3 @@
-#version 320 es
-
 out mediump vec4 out_color;
 
 in mediump vec3 color;
