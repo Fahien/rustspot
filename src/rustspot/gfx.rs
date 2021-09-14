@@ -128,10 +128,23 @@ impl Drop for ShaderProgram {
     }
 }
 
+#[derive(Copy, Clone)]
 pub struct Vertex {
     pub position: [f32; 3],
     pub color: [f32; 3],
     pub tex_coords: [f32; 2],
+    pub normal: [f32; 3],
+}
+
+impl Vertex {
+    pub fn new() -> Self {
+        Self {
+            position: [0.0, 0.0, 0.0],
+            color: [1.0, 1.0, 1.0],
+            tex_coords: [0.0, 0.0],
+            normal: [0.0, 0.0, 1.0],
+        }
+    }
 }
 
 pub struct Texture {
@@ -241,7 +254,7 @@ impl Vbo {
         unsafe { gl::BindBuffer(gl::ARRAY_BUFFER, self.handle) };
     }
 
-    fn upload<T>(&mut self, vertices: &Vec<T>) {
+    fn upload<T>(&mut self, vertices: &[T]) {
         self.bind();
         unsafe {
             gl::BufferData(
@@ -342,24 +355,136 @@ impl Primitive {
                 position: [-0.5, -0.5, 0.0],
                 color: [1.0, 1.0, 1.0],
                 tex_coords: [0.0, 0.0],
+                normal: [0.0, 0.0, 1.0],
             },
             Vertex {
                 position: [0.5, -0.5, 0.0],
                 color: [1.0, 1.0, 1.0],
                 tex_coords: [1.0, 0.0],
+                normal: [0.0, 0.0, 1.0],
             },
             Vertex {
                 position: [0.5, 0.5, 0.0],
                 color: [1.0, 1.0, 1.0],
                 tex_coords: [1.0, 1.0],
+                normal: [0.0, 0.0, 1.0],
             },
             Vertex {
                 position: [-0.5, 0.5, 0.0],
                 color: [1.0, 1.0, 1.0],
                 tex_coords: [0.0, 1.0],
+                normal: [0.0, 0.0, 1.0],
             },
         ];
         let indices = vec![0, 1, 2, 2, 3, 0];
+
+        let res = MeshRes::from(&vertices, &indices);
+
+        Self {
+            _vertices: vertices,
+            indices,
+            material,
+            res,
+        }
+    }
+
+    pub fn cube(material: Handle<Material>) -> Self {
+        let mut vertices = vec![Vertex::new(); 24];
+
+        let (tex_width, tex_height) = (4.0, 4.0);
+
+        // Front
+        vertices[0].position = [-0.5, -0.5, 0.5];
+        vertices[0].tex_coords = [1.0 / tex_width, 1.0 / tex_height];
+        vertices[0].normal = [0.0, 0.0, 1.0];
+        vertices[1].position = [0.5, -0.5, 0.5];
+        vertices[1].tex_coords = [2.0 / tex_width, 1.0 / tex_height];
+        vertices[1].normal = [0.0, 0.0, 1.0];
+        vertices[2].position = [0.5, 0.5, 0.5];
+        vertices[2].tex_coords = [2.0 / tex_width, 2.0 / tex_height];
+        vertices[2].normal = [0.0, 0.0, 1.0];
+        vertices[3].position = [-0.5, 0.5, 0.5];
+        vertices[3].tex_coords = [1.0 / tex_width, 2.0 / tex_height];
+        vertices[3].normal = [0.0, 0.0, 1.0];
+
+        // Right
+        vertices[4].position = [0.5, -0.5, 0.5];
+        vertices[4].normal = [1.0, 0.0, 0.0];
+        vertices[4].tex_coords = [2.0 / tex_width, 1.0 / tex_height];
+        vertices[5].position = [0.5, -0.5, -0.5];
+        vertices[5].normal = [1.0, 0.0, 0.0];
+        vertices[5].tex_coords = [3.0 / tex_width, 1.0 / tex_height];
+        vertices[6].position = [0.5, 0.5, -0.5];
+        vertices[6].normal = [1.0, 0.0, 0.0];
+        vertices[6].tex_coords = [3.0 / tex_width, 2.0 / tex_height];
+        vertices[7].position = [0.5, 0.5, 0.5];
+        vertices[7].normal = [1.0, 0.0, 0.0];
+        vertices[7].tex_coords = [2.0 / tex_width, 2.0 / tex_height];
+
+        // Back
+        vertices[8].position = [0.5, -0.5, -0.5];
+        vertices[8].normal = [0.0, 0.0, -1.0];
+        vertices[8].tex_coords = [3.0 / tex_width, 1.0 / tex_height];
+        vertices[9].position = [-0.5, -0.5, -0.5];
+        vertices[9].normal = [0.0, 0.0, -1.0];
+        vertices[9].tex_coords = [4.0 / tex_width, 1.0 / tex_height];
+        vertices[10].position = [-0.5, 0.5, -0.5];
+        vertices[10].normal = [0.0, 0.0, -1.0];
+        vertices[10].tex_coords = [4.0 / tex_width, 2.0 / tex_height];
+        vertices[11].position = [0.5, 0.5, -0.5];
+        vertices[11].normal = [0.0, 0.0, -1.0];
+        vertices[11].tex_coords = [3.0 / tex_width, 2.0 / tex_height];
+
+        // Left
+        vertices[12].position = [-0.5, -0.5, -0.5];
+        vertices[12].normal = [-1.0, 0.0, 0.0];
+        vertices[12].tex_coords = [0.0, 1.0 / tex_height];
+        vertices[13].position = [-0.5, -0.5, 0.5];
+        vertices[13].normal = [-1.0, 0.0, 0.0];
+        vertices[13].tex_coords = [1.0 / tex_width, 1.0 / tex_height];
+        vertices[14].position = [-0.5, 0.5, 0.5];
+        vertices[14].normal = [-1.0, 0.0, 0.0];
+        vertices[14].tex_coords = [1.0 / tex_width, 2.0 / tex_height];
+        vertices[15].position = [-0.5, 0.5, -0.5];
+        vertices[15].normal = [-1.0, 0.0, 0.0];
+        vertices[15].tex_coords = [0.0, 2.0 / tex_height];
+
+        // Top
+        vertices[16].position = [-0.5, 0.5, 0.5];
+        vertices[16].normal = [0.0, 1.0, 0.0];
+        vertices[16].tex_coords = [1.0 / tex_width, 2.0 / tex_height];
+        vertices[17].position = [0.5, 0.5, 0.5];
+        vertices[17].normal = [0.0, 1.0, 0.0];
+        vertices[17].tex_coords = [2.0 / tex_width, 2.0 / tex_height];
+        vertices[18].position = [0.5, 0.5, -0.5];
+        vertices[18].normal = [0.0, 1.0, 0.0];
+        vertices[18].tex_coords = [2.0 / tex_width, 3.0 / tex_height];
+        vertices[19].position = [-0.5, 0.5, -0.5];
+        vertices[19].normal = [0.0, 1.0, 0.0];
+        vertices[19].tex_coords = [1.0 / tex_width, 3.0 / tex_height];
+
+        // Bottom
+        vertices[20].position = [-0.5, -0.5, -0.5];
+        vertices[20].normal = [0.0, -1.0, 0.0];
+        vertices[20].tex_coords = [1.0 / tex_width, 0.0];
+        vertices[21].position = [0.5, -0.5, -0.5];
+        vertices[21].normal = [0.0, -1.0, 0.0];
+        vertices[21].tex_coords = [2.0 / tex_width, 0.0];
+        vertices[22].position = [0.5, -0.5, 0.5];
+        vertices[22].normal = [0.0, -1.0, 0.0];
+        vertices[22].tex_coords = [2.0 / tex_width, 1.0 / tex_height];
+        vertices[23].position = [-0.5, -0.5, 0.5];
+        vertices[23].normal = [0.0, -1.0, 0.0];
+        vertices[23].tex_coords = [1.0 / tex_width, 1.0 / tex_height];
+
+        let indices = vec![
+            0, 1, 2, 0, 2, 3, // front face
+            4, 5, 6, 4, 6, 7, // right
+            8, 9, 10, 8, 10, 11, // back
+            12, 13, 14, 12, 14, 15, // left
+            16, 17, 18, 16, 18, 19, // top
+            20, 21, 22, 20, 22, 23, // bottom
+        ];
 
         let res = MeshRes::from(&vertices, &indices);
 
@@ -420,24 +545,19 @@ impl MeshRes {
         Self { vbo, ebo, vao }
     }
 
-    pub fn from(vertices: &Vec<Vertex>, indices: &Vec<u32>) -> Self {
+    pub fn from(vertices: &[Vertex], indices: &Vec<u32>) -> Self {
         let mut res = MeshRes::new();
 
         res.vao.bind();
         res.vbo.upload(&vertices);
         res.ebo.upload(&indices);
 
+        let stride = std::mem::size_of::<Vertex>() as i32;
+
         // These should follow Vao, Vbo, Ebo
         unsafe {
             // Position
-            gl::VertexAttribPointer(
-                0,
-                3,
-                gl::FLOAT,
-                gl::FALSE,
-                8 * std::mem::size_of::<f32>() as i32,
-                0 as _,
-            );
+            gl::VertexAttribPointer(0, 3, gl::FLOAT, gl::FALSE, stride, 0 as _);
             gl::EnableVertexAttribArray(0);
 
             // Color
@@ -446,7 +566,7 @@ impl MeshRes {
                 3,
                 gl::FLOAT,
                 gl::FALSE,
-                8 * std::mem::size_of::<f32>() as i32,
+                stride,
                 (3 * std::mem::size_of::<f32>()) as _,
             );
             gl::EnableVertexAttribArray(1);
@@ -457,7 +577,7 @@ impl MeshRes {
                 2,
                 gl::FLOAT,
                 gl::FALSE,
-                8 * std::mem::size_of::<f32>() as i32,
+                stride,
                 (6 * std::mem::size_of::<f32>()) as _,
             );
             gl::EnableVertexAttribArray(2)
@@ -1025,6 +1145,7 @@ impl Video {
             .window("Test", 480, 320)
             .opengl()
             .position_centered()
+            .resizable()
             .build()
         {
             Ok(w) => w,
