@@ -1,132 +1,10 @@
 use std::collections::HashMap;
-use std::ffi::CString;
 use std::fs::File;
-use std::io::Read;
 use std::path::Path;
 
 use nalgebra as na;
 
-use crate::util::*;
-
-pub struct Shader {
-    handle: u32,
-}
-
-impl Shader {
-    pub fn new(
-        profile: sdl2::video::GLProfile,
-        shader_type: gl::types::GLenum,
-        src: &[u8],
-    ) -> Option<Shader> {
-        unsafe {
-            let version = if profile == sdl2::video::GLProfile::Core {
-                "#version 330 core\n"
-            } else {
-                "#version 320 es\n"
-            };
-
-            let handle = gl::CreateShader(shader_type);
-
-            let c_version = CString::new(version).unwrap();
-            let c_src = CString::new(src).unwrap();
-
-            let src_vec = vec![c_version.as_ptr(), c_src.as_ptr()];
-            let lengths: Vec<gl::types::GLint> = vec![version.len() as i32, src.len() as i32];
-            gl::ShaderSource(handle, 2, src_vec.as_ptr(), lengths.as_ptr());
-            gl::CompileShader(handle);
-
-            // Check error compiling shader
-            let mut success = gl::FALSE as gl::types::GLint;
-            let length = 512;
-            let mut log = Vec::with_capacity(length);
-            log.set_len(length as usize - 1);
-            gl::GetShaderiv(handle, gl::COMPILE_STATUS, &mut success);
-
-            if success != gl::TRUE as gl::types::GLint {
-                let mut ilen = length as i32;
-                gl::GetShaderInfoLog(
-                    handle,
-                    511,
-                    &mut ilen as *mut i32,
-                    log.as_mut_ptr() as *mut gl::types::GLchar,
-                );
-                log.set_len(ilen as usize);
-                let message = CString::from(log);
-                println!("Compilation failed: {}", message.to_str().unwrap());
-                None
-            } else {
-                Some(Shader { handle })
-            }
-        }
-    }
-}
-
-impl Drop for Shader {
-    fn drop(&mut self) {
-        unsafe { gl::DeleteShader(self.handle) };
-    }
-}
-
-pub struct ShaderProgram {
-    handle: u32,
-}
-
-impl ShaderProgram {
-    pub fn new(vert: Shader, frag: Shader) -> ShaderProgram {
-        unsafe {
-            let handle = gl::CreateProgram();
-            gl::AttachShader(handle, vert.handle);
-            gl::AttachShader(handle, frag.handle);
-            gl::LinkProgram(handle);
-            ShaderProgram { handle }
-        }
-    }
-
-    /// Returns a new shader program by loading vertex and fragment shaders files
-    pub fn open<P: AsRef<Path>>(
-        profile: sdl2::video::GLProfile,
-        vert: P,
-        frag: P,
-    ) -> ShaderProgram {
-        let mut vert_src = Vec::<u8>::new();
-        let mut frag_src = Vec::<u8>::new();
-
-        File::open(vert)
-            .expect("Failed to open vertex file")
-            .read_to_end(&mut vert_src)
-            .expect("Failed reading vertex file");
-        File::open(frag)
-            .expect("Failed to open fragment file")
-            .read_to_end(&mut frag_src)
-            .expect("Failed reading fragment file");
-
-        let vert =
-            Shader::new(profile, gl::VERTEX_SHADER, &vert_src).expect("Failed creating shader");
-        let frag =
-            Shader::new(profile, gl::FRAGMENT_SHADER, &frag_src).expect("Failed creating shader");
-
-        ShaderProgram::new(vert, frag)
-    }
-
-    pub fn enable(&self) {
-        unsafe { gl::UseProgram(self.handle) };
-    }
-
-    pub fn get_uniform_location(&self, name: &str) -> Result<i32, &str> {
-        let name = CString::new(name).expect("Failed converting Rust name to C string");
-        let location = unsafe { gl::GetUniformLocation(self.handle, name.as_ptr()) };
-        if location == -1 {
-            return Err("Failed to get uniform location");
-        }
-        Ok(location)
-    }
-}
-
-impl Drop for ShaderProgram {
-    fn drop(&mut self) {
-        unsafe { gl::DeleteProgram(self.handle) };
-    }
-}
+use crate::{shader::*, util::*};
 
 #[derive(Copy, Clone)]
 pub struct Vertex {
@@ -615,22 +493,11 @@ impl Camera {
 
     pub fn bind(&self, program: &ShaderProgram, view: &Node) {
         program.enable();
-        let view_loc = program
-            .get_uniform_location("view")
-            .expect("Failed to get view uniform location");
-        let proj_loc = program
-            .get_uniform_location("proj")
-            .expect("Failed to get proj uniform location");
 
+        let view = view.trs.isometry.inverse().to_homogeneous();
         unsafe {
-            gl::UniformMatrix4fv(
-                view_loc,
-                1,
-                gl::FALSE,
-                view.trs.isometry.inverse().to_homogeneous().as_ptr(),
-            );
-
-            gl::UniformMatrix4fv(proj_loc, 1, gl::FALSE, self.proj.as_ptr());
+            gl::UniformMatrix4fv(program.loc.view, 1, gl::FALSE, view.as_ptr());
+            gl::UniformMatrix4fv(program.loc.proj, 1, gl::FALSE, self.proj.as_ptr());
         }
     }
 }
@@ -690,11 +557,8 @@ impl Node {
     }
 
     fn bind(&self, program: &ShaderProgram, transform: &na::Matrix4<f32>) {
-        let model_loc = program
-            .get_uniform_location("model")
-            .expect("Failed to get model uniform location");
         unsafe {
-            gl::UniformMatrix4fv(model_loc, 1, gl::FALSE, transform.as_ptr());
+            gl::UniformMatrix4fv(program.loc.model, 1, gl::FALSE, transform.as_ptr());
         }
     }
 }
@@ -858,17 +722,9 @@ impl GuiRes {
 
         self.program.enable();
 
-        let proj_loc = self
-            .program
-            .get_uniform_location("proj")
-            .expect("Failed to get proj location");
-        let tex_sampler_loc = self
-            .program
-            .get_uniform_location("tex_sampler")
-            .expect("Failed to get tex_sampler location");
         unsafe {
-            gl::UniformMatrix4fv(proj_loc, 1, gl::FALSE, matrix.as_ptr() as _);
-            gl::Uniform1i(tex_sampler_loc, 0);
+            gl::UniformMatrix4fv(self.program.loc.proj, 1, gl::FALSE, matrix.as_ptr() as _);
+            gl::Uniform1i(self.program.loc.tex_sampler, 0);
         }
 
         for draw_list in data.draw_lists() {
@@ -1082,7 +938,6 @@ impl Renderer {
         for (shader_id, material_ids) in self.shaders.iter() {
             let shader = &model.programs[*shader_id];
             shader.enable();
-            let node_uniform = shader.get_uniform_location("node_id").unwrap_or(-1);
 
             // Draw the scene from all the points of view
             for (camera_handle, camera_node_handle) in self.cameras.iter() {
@@ -1105,8 +960,10 @@ impl Renderer {
                         primitive.bind();
                         let node_res = &self.primitives[primitive_id];
                         for (node_id, transform) in node_res.iter() {
-                            unsafe {
-                                gl::Uniform1i(node_uniform, *node_id as i32);
+                            if shader.loc.node_id >= 0 {
+                                unsafe {
+                                    gl::Uniform1i(shader.loc.node_id, *node_id as i32);
+                                }
                             }
 
                             model.nodes[*node_id].bind(shader, &transform);
