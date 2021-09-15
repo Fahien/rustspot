@@ -4,7 +4,7 @@
 
 use nalgebra as na;
 
-use rustspot::{gfx::*, util::*};
+use rustspot::*;
 
 fn main() {
     let sdl = sdl2::init().expect("Failed to initialize SDL2");
