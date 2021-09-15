@@ -4,7 +4,7 @@ use std::path::Path;
 
 use nalgebra as na;
 
-use crate::{shader::*, util::*};
+use crate::*;
 
 #[derive(Copy, Clone)]
 pub struct Vertex {
@@ -535,12 +535,21 @@ impl Trs {
         self.scale.y *= y;
         self.scale.z *= z;
     }
+
+    pub fn get_forward(&self) -> na::Vector3<f32> {
+        self.isometry
+            .inverse()
+            .inverse_transform_vector(&-na::Vector3::z())
+            .normalize()
+    }
 }
 
 pub struct Node {
     pub name: String,
     pub trs: Trs,
     pub mesh: Handle<Mesh>,
+    pub directional_light: Handle<DirectionalLight>,
+    pub point_light: Handle<PointLight>,
     pub camera: Handle<Camera>,
     pub children: Vec<Handle<Node>>,
 }
@@ -551,6 +560,8 @@ impl Node {
             name: String::new(),
             trs: Trs::new(),
             mesh: Handle::none(),
+            directional_light: Handle::none(),
+            point_light: Handle::none(),
             camera: Handle::none(),
             children: vec![],
         }
@@ -576,6 +587,8 @@ pub struct Model {
     pub primitives: Pack<Primitive>,
     pub meshes: Pack<Mesh>,
     pub nodes: Pack<Node>,
+    pub directional_lights: Pack<DirectionalLight>,
+    pub point_lights: Pack<PointLight>,
     pub cameras: Pack<Camera>,
 }
 
@@ -588,6 +601,8 @@ impl Model {
             primitives: Pack::new(),
             meshes: Pack::new(),
             nodes: Pack::new(),
+            directional_lights: Pack::new(),
+            point_lights: Pack::new(),
             cameras: Pack::new(),
         }
     }
@@ -828,6 +843,12 @@ pub struct Renderer {
     /// List of shader handles to bind with materials referring to them.
     shaders: HashMap<usize, Vec<usize>>,
 
+    /// Node with the directional light to use for rendering
+    directional_light: Handle<Node>,
+
+    /// List of point light handles to use while drawing the scene paired with the node to use
+    point_lights: Vec<Handle<Node>>,
+
     /// List of camera handles to use while drawing the scene paired with the node to use
     cameras: Vec<(Handle<Camera>, Handle<Node>)>,
 
@@ -843,6 +864,8 @@ impl Renderer {
     pub fn new() -> Renderer {
         Renderer {
             shaders: HashMap::new(),
+            directional_light: Handle::none(),
+            point_lights: Vec::new(),
             cameras: Vec::new(),
             materials: HashMap::new(),
             primitives: HashMap::new(),
@@ -911,6 +934,20 @@ impl Renderer {
             }
         }
 
+        // Check if current node has a directional light and set it for rendering
+        if model
+            .directional_lights
+            .get(&node.directional_light)
+            .is_some()
+        {
+            self.directional_light = *node_handle;
+        }
+
+        // Check if current node has a point light and add it to the current list
+        if model.point_lights.get(&node.point_light).is_some() {
+            self.point_lights.push(*node_handle);
+        }
+
         // Here we check if the current node has a camera, just add it
         if model.cameras.get(&node.camera).is_some() {
             self.cameras.push((node.camera, *node_handle));
@@ -938,6 +975,16 @@ impl Renderer {
         for (shader_id, material_ids) in self.shaders.iter() {
             let shader = &model.programs[*shader_id];
             shader.enable();
+
+            // Bind directional light once for each shader
+            if shader.loc.light_color >= 0 {
+                let node = model.nodes.get(&self.directional_light).unwrap();
+                let directional_light = model
+                    .directional_lights
+                    .get(&node.directional_light)
+                    .unwrap();
+                directional_light.bind(shader, node);
+            };
 
             // Draw the scene from all the points of view
             for (camera_handle, camera_node_handle) in self.cameras.iter() {
@@ -975,6 +1022,7 @@ impl Renderer {
         }
 
         self.shaders.clear();
+        self.point_lights.clear();
         self.cameras.clear();
         self.materials.clear();
         self.primitives.clear();

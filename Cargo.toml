@@ -28,3 +28,7 @@ path = "src/demo/2-rainbow.rs"
 [[bin]]
 name = "3-cube"
 path = "src/demo/3-cube.rs"
+
+[[bin]]
+name = "4-sun"
+path = "src/demo/4-sun.rs"

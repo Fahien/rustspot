@@ -82,8 +82,8 @@ impl Loc {
         let view = Loc::get_uniform_location(program_handle, "view");
         let proj = Loc::get_uniform_location(program_handle, "proj");
         let tex_sampler = Loc::get_uniform_location(program_handle, "tex_sampler");
-        let light_color = Loc::get_uniform_location(program_handle, "light.color");
-        let light_direction = Loc::get_uniform_location(program_handle, "light.direction");
+        let light_color = Loc::get_uniform_location(program_handle, "directional_light.color");
+        let light_direction = Loc::get_uniform_location(program_handle, "directional_light.direction");
 
         Self {
             node_id,
