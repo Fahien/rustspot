@@ -16,7 +16,8 @@ impl DirectionalLight {
     }
 
     pub fn bind(&self, program: &ShaderProgram, node: &Node) {
-        let direction = node.trs.get_forward();
+        // Light direction should point towards light source thus we negate it
+        let direction = -node.trs.get_forward();
 
         unsafe {
             gl::Uniform3fv(program.loc.light_color, 1, &self.color as *const f32);
