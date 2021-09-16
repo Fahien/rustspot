@@ -7,6 +7,7 @@ use nalgebra as na;
 use crate::*;
 
 #[derive(Copy, Clone)]
+#[repr(C)]
 pub struct Vertex {
     pub position: [f32; 3],
     pub color: [f32; 3],
@@ -458,7 +459,18 @@ impl MeshRes {
                 stride,
                 (6 * std::mem::size_of::<f32>()) as _,
             );
-            gl::EnableVertexAttribArray(2)
+            gl::EnableVertexAttribArray(2);
+
+            // Normal
+            gl::VertexAttribPointer(
+                3,
+                3,
+                gl::FLOAT,
+                gl::TRUE,
+                stride,
+                (8 * std::mem::size_of::<f32>()) as _,
+            );
+            gl::EnableVertexAttribArray(3);
         }
 
         res
@@ -568,8 +580,16 @@ impl Node {
     }
 
     fn bind(&self, program: &ShaderProgram, transform: &na::Matrix4<f32>) {
+        let intr = transform
+            .remove_column(3)
+            .remove_row(3)
+            .try_inverse()
+            .unwrap();
         unsafe {
             gl::UniformMatrix4fv(program.loc.model, 1, gl::FALSE, transform.as_ptr());
+            if program.loc.model_intr >= 0 {
+                gl::UniformMatrix3fv(program.loc.model_intr, 1, gl::TRUE, intr.as_ptr());
+            }
         }
     }
 }

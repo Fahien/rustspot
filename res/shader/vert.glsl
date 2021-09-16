@@ -1,6 +1,7 @@
 layout (location = 0) in vec3 in_pos;
 layout (location = 1) in vec3 in_color;
 layout (location = 2) in vec2 in_tex_coords;
+layout (location = 3) in vec3 in_normal;
 
 uniform mat4 model;
 uniform mat4 view;
