@@ -48,7 +48,11 @@ fn main() {
         }
 
         let rot =
-            na::UnitQuaternion::from_axis_angle(&na::Vector3::y_axis(), delta.as_secs_f32() / 2.0);
+            na::UnitQuaternion::from_axis_angle(&na::Vector3::y_axis(), delta.as_secs_f32() / 2.0)
+                * na::UnitQuaternion::from_axis_angle(
+                    &na::Vector3::x_axis(),
+                    delta.as_secs_f32() / 2.0,
+                );
         model.nodes.get_mut(&root).unwrap().trs.rotate(&rot);
 
         // Render something
@@ -137,8 +141,12 @@ fn create_model(profile: sdl2::video::GLProfile) -> (Model, Handle<Node>) {
 
     let light = model
         .directional_lights
-        .push(DirectionalLight::color(0.7, 0.2, 0.8));
+        .push(DirectionalLight::color(1.0, 1.0, 1.0));
     let mut light_node = Node::new();
+    light_node.trs.rotate(&na::UnitQuaternion::from_axis_angle(
+        &na::Vector3::x_axis(),
+        -std::f32::consts::FRAC_PI_4,
+    ));
     light_node.directional_light = light;
     let light_node = model.nodes.push(light_node);
     root.children.push(light_node);
