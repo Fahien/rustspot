@@ -11,8 +11,6 @@ fn main() {
 
     let (mut model, root) = create_model(spot.gfx.video.profile);
 
-    let mut timer = Timer::new();
-
     let mut step = 0.5;
     let mut red = 0.0;
 
@@ -25,13 +23,7 @@ fn main() {
             }
         }
 
-        // Calculate delta time
-        let delta = timer.get_delta();
-
-        // Update GUI
-        let ui = spot.gfx.gui.io_mut();
-        ui.update_delta_time(delta);
-        ui.display_size = [480.0, 320.0];
+        let delta = spot.update();
 
         // Update logic
         red += step * delta.as_secs_f32();
