@@ -9,9 +9,6 @@ use rustspot::*;
 fn main() {
     let mut spot = Spot::new();
 
-    let mut gui = imgui::Context::create();
-    let mut gui_res = GuiRes::new(spot.gfx.video.profile, &mut gui.fonts());
-
     let (mut model, root) = create_model(spot.gfx.video.profile);
 
     let mut timer = Timer::new();
@@ -32,7 +29,7 @@ fn main() {
         let delta = timer.get_delta();
 
         // Update GUI
-        let ui = gui.io_mut();
+        let ui = spot.gfx.gui.io_mut();
         ui.update_delta_time(delta);
         ui.display_size = [480.0, 320.0];
 
@@ -65,7 +62,7 @@ fn main() {
         spot.gfx.renderer.present(&model);
 
         // Render GUI
-        let ui = gui.frame();
+        let ui = spot.gfx.gui.frame();
 
         // Draw gui here before drawing it
         imgui::Window::new(imgui::im_str!("Objects"))
@@ -77,7 +74,7 @@ fn main() {
                 ui.text(imgui::im_str!("nodes: {}", model.nodes.len()));
             });
 
-        gui_res.draw(ui);
+        spot.gfx.renderer.draw_gui(ui);
 
         // Present to the screen
         spot.gfx.swap_buffers();
