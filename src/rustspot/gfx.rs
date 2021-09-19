@@ -514,6 +514,7 @@ impl Camera {
     }
 }
 
+#[derive(Clone)]
 pub struct Trs {
     isometry: na::Isometry3<f32>,
     scale: na::Vector3<f32>,
@@ -556,6 +557,7 @@ impl Trs {
     }
 }
 
+#[derive(Clone)]
 pub struct Node {
     pub name: String,
     pub trs: Trs,
