@@ -7,26 +7,15 @@ use nalgebra as na;
 use rustspot::*;
 
 fn main() {
-    let sdl = sdl2::init().expect("Failed to initialize SDL2");
-    let mut events = sdl.event_pump().expect("Failed to initialize SDL2 events");
+    let mut spot = Spot::new();
 
-    let mut gfx = Gfx::new(&sdl);
-    let gl_version = gfx.get_gl_version();
-    println!("OpenGL v{}.{}", gl_version.0, gl_version.1);
-
-    let mut gui = imgui::Context::create();
-    let mut gui_res = GuiRes::new(gfx.video.profile, &mut gui.fonts());
-
-    let (mut model, root) = create_model(gfx.video.profile);
+    let (mut model, root) = create_model(spot.gfx.video.profile);
 
     let mut timer = Timer::new();
 
-    let mut step = 0.5;
-    let mut red = 0.0;
-
     'gameloop: loop {
         // Handle SDL2 events
-        for event in events.poll_iter() {
+        for event in spot.events.poll_iter() {
             match event {
                 sdl2::event::Event::Quit { .. } => break 'gameloop,
                 _ => println!("{:?}", event),
@@ -35,17 +24,6 @@ fn main() {
 
         // Calculate delta time
         let delta = timer.get_delta();
-
-        // Update GUI
-        let ui = gui.io_mut();
-        ui.update_delta_time(delta);
-        ui.display_size = [480.0, 320.0];
-
-        // Update logic
-        red = step; //* delta.as_secs_f32();
-        if red > 1.0 || red < 0.0 {
-            step = -step;
-        }
 
         let rot =
             na::UnitQuaternion::from_axis_angle(&na::Vector3::y_axis(), delta.as_secs_f32() / 2.0)
@@ -64,30 +42,15 @@ fn main() {
             gl::Enable(gl::DEPTH_TEST);
             gl::Disable(gl::SCISSOR_TEST);
 
-            gl::ClearColor(red, 0.5, 1.0, 0.0);
+            gl::ClearColor(0.5, 0.5, 1.0, 0.0);
             gl::Clear(gl::COLOR_BUFFER_BIT | gl::DEPTH_BUFFER_BIT);
         }
 
-        gfx.renderer.draw(&model, &root, &na::Matrix4::identity());
-        gfx.renderer.present(&model);
-
-        // Render GUI
-        let ui = gui.frame();
-
-        // Draw gui here before drawing it
-        imgui::Window::new(imgui::im_str!("Objects"))
-            .size([300.0, 180.0], imgui::Condition::FirstUseEver)
-            .build(&ui, || {
-                ui.text(imgui::im_str!("materials: {}", model.materials.len()));
-                ui.text(imgui::im_str!("primitives: {}", model.primitives.len()));
-                ui.text(imgui::im_str!("meshes: {}", model.meshes.len()));
-                ui.text(imgui::im_str!("nodes: {}", model.nodes.len()));
-            });
-
-        //gui_res.draw(ui);
+        spot.gfx.renderer.draw(&model, &root, &na::Matrix4::identity());
+        spot.gfx.renderer.present(&model);
 
         // Present to the screen
-        gfx.swap_buffers();
+        spot.gfx.swap_buffers();
     }
 }
 
