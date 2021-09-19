@@ -1,4 +1,6 @@
 pub mod shader;
+use std::time::Duration;
+
 pub use shader::*;
 
 pub mod light;
@@ -14,6 +16,7 @@ pub mod util;
 pub use util::*;
 
 pub struct Spot {
+    pub timer: Timer,
     pub gfx: Gfx,
     pub events: sdl2::EventPump,
     pub sdl: sdl2::Sdl,
@@ -28,6 +31,25 @@ impl Spot {
         let gl_version = gfx.get_gl_version();
         println!("OpenGL v{}.{}", gl_version.0, gl_version.1);
 
-        Spot { gfx, events, sdl }
+        let timer = Timer::new();
+
+        Spot {
+            gfx,
+            events,
+            sdl,
+            timer,
+        }
+    }
+
+    pub fn update(&mut self) -> Duration {
+        let delta = self.timer.get_delta();
+
+        // Update GUI
+        let ui = self.gfx.gui.io_mut();
+        ui.update_delta_time(delta);
+        // TODO Should this update be here or somewhere else?
+        ui.display_size = [480.0, 320.0];
+
+        delta
     }
 }

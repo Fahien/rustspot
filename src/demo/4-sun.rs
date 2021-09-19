@@ -11,8 +11,6 @@ fn main() {
 
     let (mut model, root) = create_model(spot.gfx.video.profile);
 
-    let mut timer = Timer::new();
-
     'gameloop: loop {
         // Handle SDL2 events
         for event in spot.events.poll_iter() {
@@ -22,8 +20,7 @@ fn main() {
             }
         }
 
-        // Calculate delta time
-        let delta = timer.get_delta();
+        let delta = spot.update();
 
         let rot =
             na::UnitQuaternion::from_axis_angle(&na::Vector3::y_axis(), delta.as_secs_f32() / 2.0)
@@ -46,7 +43,9 @@ fn main() {
             gl::Clear(gl::COLOR_BUFFER_BIT | gl::DEPTH_BUFFER_BIT);
         }
 
-        spot.gfx.renderer.draw(&model, &root, &na::Matrix4::identity());
+        spot.gfx
+            .renderer
+            .draw(&model, &root, &na::Matrix4::identity());
         spot.gfx.renderer.present(&model);
 
         // Present to the screen
