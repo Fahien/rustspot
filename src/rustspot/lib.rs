@@ -4,6 +4,9 @@ pub use shader::*;
 pub mod light;
 pub use light::*;
 
+pub mod gui;
+pub use gui::*;
+
 pub mod gfx;
 pub use gfx::*;
 
@@ -11,9 +14,9 @@ pub mod util;
 pub use util::*;
 
 pub struct Spot {
-    pub sdl: sdl2::Sdl,
-    pub events: sdl2::EventPump,
     pub gfx: Gfx,
+    pub events: sdl2::EventPump,
+    pub sdl: sdl2::Sdl,
 }
 
 impl Spot {
@@ -25,6 +28,6 @@ impl Spot {
         let gl_version = gfx.get_gl_version();
         println!("OpenGL v{}.{}", gl_version.0, gl_version.1);
 
-        Spot { sdl, events, gfx }
+        Spot { gfx, events, sdl }
     }
 }
