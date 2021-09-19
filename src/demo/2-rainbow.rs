@@ -7,17 +7,12 @@ use nalgebra as na;
 use rustspot::*;
 
 fn main() {
-    let sdl = sdl2::init().expect("Failed to initialize SDL2");
-    let mut events = sdl.event_pump().expect("Failed to initialize SDL2 events");
-
-    let mut gfx = Gfx::new(&sdl);
-    let gl_version = gfx.get_gl_version();
-    println!("OpenGL v{}.{}", gl_version.0, gl_version.1);
+    let mut spot = Spot::new();
 
     let mut gui = imgui::Context::create();
-    let mut gui_res = GuiRes::new(gfx.video.profile, &mut gui.fonts());
+    let mut gui_res = GuiRes::new(spot.gfx.video.profile, &mut gui.fonts());
 
-    let (mut model, root) = create_model(gfx.video.profile);
+    let (mut model, root) = create_model(spot.gfx.video.profile);
 
     let mut timer = Timer::new();
 
@@ -26,7 +21,7 @@ fn main() {
 
     'gameloop: loop {
         // Handle SDL2 events
-        for event in events.poll_iter() {
+        for event in spot.events.poll_iter() {
             match event {
                 sdl2::event::Event::Quit { .. } => break 'gameloop,
                 _ => println!("{:?}", event),
@@ -64,8 +59,10 @@ fn main() {
             gl::Clear(gl::COLOR_BUFFER_BIT | gl::DEPTH_BUFFER_BIT);
         }
 
-        gfx.renderer.draw(&model, &root, &na::Matrix4::identity());
-        gfx.renderer.present(&model);
+        spot.gfx
+            .renderer
+            .draw(&model, &root, &na::Matrix4::identity());
+        spot.gfx.renderer.present(&model);
 
         // Render GUI
         let ui = gui.frame();
@@ -83,7 +80,7 @@ fn main() {
         gui_res.draw(ui);
 
         // Present to the screen
-        gfx.swap_buffers();
+        spot.gfx.swap_buffers();
     }
 }
 
