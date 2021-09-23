@@ -9,6 +9,9 @@ pub use light::*;
 pub mod gui;
 pub use gui::*;
 
+pub mod frame;
+pub use frame::*;
+
 pub mod gfx;
 pub use gfx::*;
 
