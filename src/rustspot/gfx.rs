@@ -974,6 +974,9 @@ impl Video {
         attr.set_context_profile(profile);
         attr.set_context_version(3, 2);
 
+        attr.set_multisample_buffers(1);
+        attr.set_multisample_samples(2);
+
         let window = match system
             // TODO: pass these as parameters
             .window("Test", 480, 320)
