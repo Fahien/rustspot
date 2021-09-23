@@ -958,7 +958,26 @@ impl Renderer {
     }
 }
 
+#[derive(Clone, Copy, PartialEq)]
+pub struct Extent2D {
+    pub width: u32,
+    pub height: u32,
+}
+
+impl Extent2D {
+    pub fn new(width: u32, height: u32) -> Self {
+        Self { width, height }
+    }
+}
+
+impl Default for Extent2D {
+    fn default() -> Self {
+        Self::new(0, 0)
+    }
+}
+
 pub struct Video {
+    pub extent: Extent2D,
     system: sdl2::VideoSubsystem,
     window: sdl2::video::Window,
     pub profile: sdl2::video::GLProfile,
@@ -969,6 +988,10 @@ impl Video {
     fn new(sdl: &sdl2::Sdl) -> Self {
         let system = sdl.video().expect("Failed initializing video");
 
+        // TODO: pass these as parameters
+        let width = 480;
+        let height = 320;
+
         let attr = system.gl_attr();
         let mut profile = sdl2::video::GLProfile::GLES;
         attr.set_context_profile(profile);
@@ -978,8 +1001,7 @@ impl Video {
         attr.set_multisample_samples(2);
 
         let window = match system
-            // TODO: pass these as parameters
-            .window("Test", 480, 320)
+            .window("Test", width, height)
             .opengl()
             .position_centered()
             .resizable()
@@ -992,7 +1014,7 @@ impl Video {
                 attr.set_context_profile(profile);
                 attr.set_context_version(3, 3);
                 system
-                    .window("Test", 480, 320)
+                    .window("Test", width, height)
                     .opengl()
                     .position_centered()
                     .build()
@@ -1007,6 +1029,7 @@ impl Video {
         gl::load_with(|symbol| system.gl_get_proc_address(symbol) as *const _);
 
         Self {
+            extent: Extent2D::new(width, height),
             system,
             window,
             profile,
