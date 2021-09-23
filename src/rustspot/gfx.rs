@@ -37,6 +37,44 @@ impl Texture {
         Texture { handle }
     }
 
+    pub fn attachment(
+        extent: Extent2D,
+        format: gl::types::GLenum,
+        type_: gl::types::GLenum,
+    ) -> Self {
+        let texture = Self::new();
+        texture.bind();
+
+        unsafe {
+            gl::TexImage2D(
+                gl::TEXTURE_2D,
+                0,
+                format as _,
+                extent.width as _,
+                extent.height as _,
+                0,
+                format,
+                type_,
+                std::ptr::null(),
+            );
+
+            gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_WRAP_S, gl::REPEAT as i32);
+            gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_WRAP_T, gl::REPEAT as i32);
+            gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MIN_FILTER, gl::NEAREST as i32);
+            gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MAG_FILTER, gl::NEAREST as i32);
+        }
+
+        texture
+    }
+
+    pub fn color(extent: Extent2D) -> Self {
+        Self::attachment(extent, gl::RGB, gl::UNSIGNED_BYTE)
+    }
+
+    pub fn depth(extent: Extent2D) -> Self {
+        Self::attachment(extent, gl::DEPTH_COMPONENT, gl::UNSIGNED_SHORT)
+    }
+
     /// Creates a one pixel texture with the RGBA color passed as argument
     pub fn pixel(data: &[u8; 4]) -> Self {
         let mut texture = Self::new();
