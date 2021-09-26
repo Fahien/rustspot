@@ -42,7 +42,9 @@ fn main() {
         spot.gfx
             .renderer
             .draw(&model, &root, &na::Matrix4::identity());
-        spot.gfx.renderer.present(&model);
+        spot.gfx
+            .renderer
+            .present(&spot.gfx.default_framebuffer, &model);
 
         // Present to the screen
         spot.gfx.swap_buffers();
