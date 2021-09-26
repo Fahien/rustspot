@@ -40,3 +40,7 @@ path = "src/demo/5-structure.rs"
 [[bin]]
 name = "6-viewport"
 path = "src/demo/6-viewport.rs"
+
+[[bin]]
+name = "7-depth"
+path = "src/demo/7-depth.rs"
