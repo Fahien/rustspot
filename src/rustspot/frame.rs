@@ -35,20 +35,14 @@ impl<'a> FramebufferBuilder<'a> {
     }
 
     pub fn build(self) -> Framebuffer {
-        assert!(self.extent == self.color_texture.unwrap().extent);
-
         let mut handle = 0;
         unsafe { gl::GenFramebuffers(1, &mut handle as _) };
 
         let mut framebuffer = Framebuffer::new(handle, self.extent);
         framebuffer.bind();
 
-        framebuffer.set_color_attachment(self.color_texture.expect("Color attachment is required"));
-
-        if let Some(depth_texture) = self.depth_texture {
-            assert!(self.extent == depth_texture.extent);
-            framebuffer.set_depth_attachment(depth_texture);
-        }
+        framebuffer.set_color_attachment(&self.color_texture);
+        framebuffer.set_depth_attachment(&self.depth_texture);
 
         if !framebuffer.is_complete() {
             println!("Framebuffer is not complete");
@@ -91,25 +85,24 @@ impl Framebuffer {
         }
     }
 
-    fn set_attachment(&mut self, attachment_type: gl::types::GLenum, texture: &Texture) {
+    fn set_attachment(&mut self, attachment_type: gl::types::GLenum, texture: &Option<&Texture>) {
+        let handle = match texture {
+            Some(texture) => texture.handle,
+            None => gl::NONE,
+        };
+
         unsafe {
-            gl::FramebufferTexture2D(
-                gl::FRAMEBUFFER,
-                attachment_type,
-                gl::TEXTURE_2D,
-                texture.handle,
-                0,
-            )
+            gl::FramebufferTexture2D(gl::FRAMEBUFFER, attachment_type, gl::TEXTURE_2D, handle, 0)
         };
     }
 
-    fn set_color_attachment(&mut self, color_texture: &Texture) {
+    fn set_color_attachment(&mut self, color_texture: &Option<&Texture>) {
         self.set_attachment(gl::COLOR_ATTACHMENT0, color_texture);
     }
 
     // We need to use a depth texture to sample from
-    fn set_depth_attachment(&mut self, color_texture: &Texture) {
-        self.set_attachment(gl::DEPTH_ATTACHMENT, color_texture);
+    fn set_depth_attachment(&mut self, depth_texture: &Option<&Texture>) {
+        self.set_attachment(gl::DEPTH_ATTACHMENT, depth_texture);
     }
 
     fn is_complete(&self) -> bool {
