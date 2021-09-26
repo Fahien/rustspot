@@ -61,6 +61,7 @@ impl Drop for Shader {
 
 /// Uniform location handles. Handles can be negative if not found.
 pub struct Loc {
+    pub extent: i32,
     pub node_id: i32,
     pub model: i32,
     pub view: i32,
@@ -79,6 +80,7 @@ impl Loc {
     }
 
     pub fn new(program_handle: u32) -> Loc {
+        let extent = Loc::get_uniform_location(program_handle, "extent");
         let node_id = Loc::get_uniform_location(program_handle, "node_id");
         let model = Loc::get_uniform_location(program_handle, "model");
         let view = Loc::get_uniform_location(program_handle, "view");
@@ -90,6 +92,7 @@ impl Loc {
             Loc::get_uniform_location(program_handle, "directional_light.direction");
 
         Self {
+            extent,
             node_id,
             model,
             view,
