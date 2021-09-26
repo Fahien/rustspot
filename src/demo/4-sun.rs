@@ -7,7 +7,7 @@ use nalgebra as na;
 use rustspot::*;
 
 fn main() {
-    let mut spot = Spot::new();
+    let mut spot = Spot::builder().build();
 
     let (mut model, root) = create_model(spot.gfx.video.profile);
 
