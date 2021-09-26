@@ -1023,12 +1023,8 @@ pub struct Video {
 }
 
 impl Video {
-    fn new(sdl: &sdl2::Sdl) -> Self {
+    fn new(sdl: &sdl2::Sdl, extent: Extent2D) -> Self {
         let system = sdl.video().expect("Failed initializing video");
-
-        // TODO: pass these as parameters
-        let width = 480;
-        let height = 320;
 
         let attr = system.gl_attr();
         let mut profile = sdl2::video::GLProfile::GLES;
@@ -1039,7 +1035,7 @@ impl Video {
         attr.set_multisample_samples(2);
 
         let window = match system
-            .window("Test", width, height)
+            .window("Test", extent.width, extent.height)
             .opengl()
             .position_centered()
             .resizable()
@@ -1052,7 +1048,7 @@ impl Video {
                 attr.set_context_profile(profile);
                 attr.set_context_version(3, 3);
                 system
-                    .window("Test", width, height)
+                    .window("Test", extent.width, extent.height)
                     .opengl()
                     .position_centered()
                     .build()
@@ -1067,7 +1063,7 @@ impl Video {
         gl::load_with(|symbol| system.gl_get_proc_address(symbol) as *const _);
 
         Self {
-            extent: Extent2D::new(width, height),
+            extent,
             system,
             window,
             profile,
@@ -1083,8 +1079,8 @@ pub struct Gfx {
 }
 
 impl Gfx {
-    pub fn new(sdl: &sdl2::Sdl) -> Self {
-        let video = Video::new(sdl);
+    pub fn new(sdl: &sdl2::Sdl, extent: Extent2D) -> Self {
+        let video = Video::new(sdl, extent);
         let mut gui = imgui::Context::create();
         let renderer = Renderer::new(video.profile, &mut gui.fonts());
         Self {
