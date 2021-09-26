@@ -1087,9 +1087,10 @@ impl Video {
 }
 
 pub struct Gfx {
-    pub video: Video,
+    pub default_framebuffer: Framebuffer,
     pub renderer: Renderer,
     pub gui: imgui::Context,
+    pub video: Video,
 }
 
 impl Gfx {
@@ -1097,10 +1098,13 @@ impl Gfx {
         let video = Video::new(sdl, extent);
         let mut gui = imgui::Context::create();
         let renderer = Renderer::new(video.profile, &mut gui.fonts());
+        let default_framebuffer = Framebuffer::default(extent);
+
         Self {
-            video,
+            default_framebuffer,
             renderer,
             gui,
+            video,
         }
     }
 
