@@ -28,13 +28,17 @@ impl Vertex {
 
 pub struct Texture {
     pub handle: u32,
+    pub extent: Extent2D,
 }
 
 impl Texture {
     pub fn new() -> Texture {
         let mut handle: u32 = 0;
         unsafe { gl::GenTextures(1, &mut handle) };
-        Texture { handle }
+        Texture {
+            handle,
+            extent: Extent2D::new(0, 0),
+        }
     }
 
     pub fn attachment(
@@ -42,7 +46,8 @@ impl Texture {
         format: gl::types::GLenum,
         type_: gl::types::GLenum,
     ) -> Self {
-        let texture = Self::new();
+        let mut texture = Self::new();
+        texture.extent = extent;
         texture.bind();
 
         unsafe {
@@ -103,6 +108,9 @@ impl Texture {
     }
 
     pub fn upload<T>(&mut self, width: u32, height: u32, data: &[T]) {
+        self.extent.width = width;
+        self.extent.height = height;
+
         self.bind();
 
         unsafe {
