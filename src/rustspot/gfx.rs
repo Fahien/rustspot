@@ -533,9 +533,15 @@ pub struct Camera {
 }
 
 impl Camera {
-    pub fn orthogonal() -> Camera {
-        let (w, h) = (4.8, 3.2);
-        let proj = na::Orthographic3::new(-w / 2.0, w / 2.0, -h / 2.0, h / 2.0, 0.1, 100.0);
+    pub fn orthographic(width: u32, height: u32) -> Camera {
+        let proj = na::Orthographic3::new(
+            -(width as f32) / 2.0,
+            width as f32 / 2.0,
+            -(height as f32) / 2.0,
+            (height as f32) / 2.0,
+            0.1,
+            100.0,
+        );
         Camera {
             proj: proj.to_homogeneous(),
         }
