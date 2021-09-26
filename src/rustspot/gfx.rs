@@ -828,7 +828,7 @@ impl Renderer {
     }
 
     /// This should be called after drawing everything to trigger the actual GL rendering.
-    pub fn present(&mut self, model: &Model) {
+    pub fn present(&mut self, framebuffer: &Framebuffer, model: &Model) {
         // Rendering should follow this approach
         // foreach prog in programs:
         //   bind(prog)
@@ -843,6 +843,17 @@ impl Renderer {
         for (shader_id, material_ids) in self.shaders.iter() {
             let shader = &model.programs[*shader_id];
             shader.enable();
+
+            // Bind extent
+            if shader.loc.extent >= 0 {
+                unsafe {
+                    gl::Uniform2f(
+                        shader.loc.extent,
+                        framebuffer.virtual_extent.width as f32,
+                        framebuffer.virtual_extent.height as f32,
+                    );
+                }
+            }
 
             // Bind directional light once for each shader
             if shader.loc.light_color >= 0 {
