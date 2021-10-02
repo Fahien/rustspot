@@ -1,14 +1,17 @@
-// Copyright © 2020
+// Copyright © 2021
 // Author: Antonio Caggiano <info@antoniocaggiano.eu>
 // SPDX-License-Identifier: MIT
 
 use nalgebra as na;
 
 use rustspot::*;
+
 mod model;
 
 fn main() {
-    let mut spot = Spot::builder().build();
+    let width = 480;
+    let height = 320;
+    let mut spot = Spot::builder().width(width).height(height).build();
 
     let (mut model, root) = create_model(spot.gfx.video.profile);
 
@@ -34,7 +37,12 @@ fn main() {
         let frame = spot.gfx.next_frame();
         spot.gfx
             .renderer
-            .render_geometry(&model, &frame.default_framebuffer);
+            .render_shadow(&model, &frame.shadow_buffer);
+
+        // Draw a simple triangle which cover the whole screen
+        spot.gfx
+            .renderer
+            .blit_depth(&frame.shadow_buffer, &frame.default_framebuffer);
 
         // Present to the screen
         spot.gfx.present(frame);
@@ -47,8 +55,8 @@ fn create_model(profile: sdl2::video::GLProfile) -> (Model, Handle<Node>) {
     // Shaders
     model.programs.push(ShaderProgram::open(
         profile,
-        "res/shader/light-vert.glsl",
-        "res/shader/light-frag.glsl",
+        "res/shader/vert.glsl",
+        "res/shader/frag.glsl",
     ));
 
     let root = model::create_structure_scene(&mut model);

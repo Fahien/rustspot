@@ -11,9 +11,6 @@ fn main() {
 
     let (mut model, root) = create_model(spot.gfx.video.profile);
 
-    let mut step = 0.5;
-    let mut red = 0.0;
-
     'gameloop: loop {
         // Handle SDL2 events
         for event in spot.events.poll_iter() {
@@ -25,35 +22,18 @@ fn main() {
 
         let delta = spot.update();
 
-        // Update logic
-        red += step * delta.as_secs_f32();
-        if red > 1.0 || red < 0.0 {
-            step = -step;
-        }
-
         let rot =
             na::UnitQuaternion::from_axis_angle(&na::Vector3::y_axis(), delta.as_secs_f32() / 2.0);
         model.nodes.get_mut(&root).unwrap().trs.rotate(&rot);
 
-        // Render something
-        unsafe {
-            gl::Enable(gl::BLEND);
-            gl::BlendEquation(gl::FUNC_ADD);
-            gl::BlendFunc(gl::SRC_ALPHA, gl::ONE_MINUS_SRC_ALPHA);
-            gl::Disable(gl::CULL_FACE);
-            gl::Disable(gl::DEPTH_TEST);
-            gl::Disable(gl::SCISSOR_TEST);
-
-            gl::ClearColor(red, 0.5, 1.0, 0.0);
-            gl::Clear(gl::COLOR_BUFFER_BIT | gl::DEPTH_BUFFER_BIT);
-        }
-
         spot.gfx
             .renderer
             .draw(&model, &root, &na::Matrix4::identity());
+
+        let frame = spot.gfx.next_frame();
         spot.gfx
             .renderer
-            .present(&spot.gfx.default_framebuffer, &model);
+            .render_geometry(&model, &frame.default_framebuffer);
 
         // Render GUI
         let ui = spot.gfx.gui.frame();
@@ -71,7 +51,7 @@ fn main() {
         spot.gfx.renderer.draw_gui(ui);
 
         // Present to the screen
-        spot.gfx.swap_buffers();
+        spot.gfx.present(frame);
     }
 }
 
