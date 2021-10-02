@@ -30,28 +30,17 @@ fn main() {
                 );
         model.nodes.get_mut(&root).unwrap().trs.rotate(&rot);
 
-        // Render something
-        unsafe {
-            gl::Enable(gl::BLEND);
-            gl::BlendEquation(gl::FUNC_ADD);
-            gl::BlendFunc(gl::SRC_ALPHA, gl::ONE_MINUS_SRC_ALPHA);
-            gl::Disable(gl::CULL_FACE);
-            gl::Enable(gl::DEPTH_TEST);
-            gl::Disable(gl::SCISSOR_TEST);
-
-            gl::ClearColor(0.5, 0.5, 1.0, 0.0);
-            gl::Clear(gl::COLOR_BUFFER_BIT | gl::DEPTH_BUFFER_BIT);
-        }
-
         spot.gfx
             .renderer
             .draw(&model, &root, &na::Matrix4::identity());
+
+        let frame = spot.gfx.next_frame();
         spot.gfx
             .renderer
-            .present(&spot.gfx.default_framebuffer, &model);
+            .render_geometry(&model, &frame.default_framebuffer);
 
         // Present to the screen
-        spot.gfx.swap_buffers();
+        spot.gfx.present(frame);
     }
 }
 

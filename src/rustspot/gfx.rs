@@ -780,21 +780,23 @@ impl Video {
 }
 
 pub struct Gfx {
-    pub default_framebuffer: Framebuffer,
+    /// The frame can be taken by a client for drawing.
+    /// Then it is returned for presenting to screen.
+    frame: Option<Frame>,
     pub renderer: Renderer,
     pub gui: imgui::Context,
     pub video: Video,
 }
 
 impl Gfx {
-    pub fn new(sdl: &sdl2::Sdl, extent: Extent2D) -> Self {
+    pub fn new(sdl: &sdl2::Sdl, extent: Extent2D, offscreen_extent: Extent2D) -> Self {
         let video = Video::new(sdl, extent);
         let mut gui = imgui::Context::create();
         let renderer = Renderer::new(video.profile, &mut gui.fonts());
-        let default_framebuffer = Framebuffer::default(extent);
+        let frame = Some(Frame::new(extent, offscreen_extent));
 
         Self {
-            default_framebuffer,
+            frame,
             renderer,
             gui,
             video,
@@ -810,7 +812,12 @@ impl Gfx {
         (major, minor)
     }
 
-    pub fn swap_buffers(&self) {
+    pub fn next_frame(&mut self) -> Frame {
+        self.frame.take().unwrap()
+    }
+
+    pub fn present(&mut self, frame: Frame) {
+        self.frame.replace(frame);
         self.video.window.gl_swap_window();
     }
 }

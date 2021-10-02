@@ -3,6 +3,7 @@
 // SPDX-License-Identifier: MIT
 
 use super::*;
+
 use nalgebra as na;
 use std::collections::HashMap;
 
@@ -27,10 +28,50 @@ pub struct Renderer {
     /// List of primitive handles to draw with nodes referring to them.
     /// Together with nodes, we store their transform matrix computed during the scene graph traversal.
     primitives: HashMap<usize, HashMap<usize, na::Matrix4<f32>>>,
+
+    /// Shader program used to draw a shadow map
+    pub draw_shadow_program: ShaderProgram,
+
+    pub read_depth_program: ShaderProgram,
+    pub read_color_program: ShaderProgram,
+
+    /// Orthographic camera and node for camera
+    pub screen_camera: Camera,
+    pub screen_node: Node,
+
+    /// Quad for rendering texture to screen
+    pub quad_primitive: Primitive,
+    pub quad_node: Node,
 }
 
 impl Renderer {
     pub fn new(profile: sdl2::video::GLProfile, fonts: &mut imgui::FontAtlasRefMut) -> Renderer {
+        let draw_shadow_program = ShaderProgram::open(
+            profile,
+            "res/shader/depth.vert.glsl",
+            "res/shader/depth.frag.glsl",
+        );
+
+        let read_depth_program = ShaderProgram::open(
+            profile,
+            "res/shader/vert.glsl",
+            "res/shader/read-depth.frag.glsl",
+        );
+
+        let read_color_program = ShaderProgram::open(
+            profile,
+            "res/shader/vert.glsl",
+            "res/shader/read-color.frag.glsl",
+        );
+
+        let screen_camera = Camera::orthographic(1, 1);
+        let mut screen_node = Node::new();
+        screen_node.trs.translate(0.0, 0.0, 1.0);
+
+        // Create a unit quad to present offscreen texture
+        let quad_primitive = Primitive::quad(Handle::none());
+        let quad_node = Node::new();
+
         Renderer {
             gui_res: GuiRes::new(profile, fonts),
             shaders: HashMap::new(),
@@ -39,6 +80,16 @@ impl Renderer {
             cameras: Vec::new(),
             materials: HashMap::new(),
             primitives: HashMap::new(),
+
+            draw_shadow_program,
+            read_depth_program,
+            read_color_program,
+
+            screen_camera,
+            screen_node,
+
+            quad_primitive,
+            quad_node,
         }
     }
 
@@ -129,8 +180,162 @@ impl Renderer {
         }
     }
 
+    /// Renders a shadowmap. It should be called after drawing.
+    pub fn render_shadow<D: DrawableOnto>(&mut self, model: &Model, target: &D) {
+        // Offscreen framebuffer
+        let framebuffer = target.get_framebuffer();
+        framebuffer.bind();
+        unsafe {
+            gl::Viewport(
+                0,
+                0,
+                framebuffer.extent.width as _,
+                framebuffer.extent.height as _,
+            );
+
+            gl::Enable(gl::BLEND);
+            gl::BlendEquation(gl::FUNC_ADD);
+            gl::BlendFunc(gl::SRC_ALPHA, gl::ONE_MINUS_SRC_ALPHA);
+            gl::Disable(gl::CULL_FACE);
+            gl::Enable(gl::DEPTH_TEST);
+            gl::Disable(gl::SCISSOR_TEST);
+
+            gl::ClearColor(0.6, 0.5, 1.0, 0.0);
+            gl::Clear(gl::COLOR_BUFFER_BIT | gl::DEPTH_BUFFER_BIT);
+        }
+
+        // Draw only depth
+        self.draw_shadow_program.enable();
+
+        // Bind directional light as camera view
+        let light_node = model.nodes.get(&self.directional_light).unwrap();
+        // Create orthographic camera but how big?
+        let camera = Camera::orthographic(
+            framebuffer.virtual_extent.width / 64,
+            framebuffer.virtual_extent.height / 64,
+        );
+        camera.bind(&self.draw_shadow_program, light_node);
+
+        // Draw the scene from the light point of view
+        for (primitive_id, node_res) in self.primitives.iter() {
+            let primitive = &model.primitives[*primitive_id];
+
+            // Bind the primitive, bind the nodes using that primitive, draw the primitive.
+            primitive.bind();
+            for (node_id, transform) in node_res.iter() {
+                model.nodes[*node_id].bind(&self.draw_shadow_program, &transform);
+                primitive.draw();
+            }
+        }
+
+        self.shaders.clear();
+        self.point_lights.clear();
+        self.cameras.clear();
+        self.materials.clear();
+        self.primitives.clear()
+    }
+
+    /// Renders depth from offscreen framebuffer to the screen
+    pub fn blit_depth<D: DrawableOnto>(&mut self, source: &CustomFramebuffer, target: &D) {
+        let depth_texture = source.depth_texture.as_ref().unwrap();
+
+        let framebuffer = target.get_framebuffer();
+        framebuffer.bind();
+        unsafe {
+            gl::Viewport(
+                0,
+                0,
+                framebuffer.extent.width as _,
+                framebuffer.extent.height as _,
+            );
+            gl::ClearColor(0.0, 0.0, 0.0, 0.0);
+            gl::Clear(gl::COLOR_BUFFER_BIT | gl::DEPTH_BUFFER_BIT);
+        }
+
+        // Bind depth read shader
+        self.read_depth_program.enable();
+
+        // Bind extent
+        if self.read_depth_program.loc.extent >= 0 {
+            unsafe {
+                gl::Uniform2f(
+                    self.read_depth_program.loc.extent,
+                    depth_texture.extent.width as f32,
+                    depth_texture.extent.height as f32,
+                );
+            }
+        }
+
+        // Bind camera
+        self.screen_camera
+            .bind(&self.read_depth_program, &self.screen_node);
+
+        // Bind texture
+        depth_texture.bind();
+
+        // Bind quad
+        self.quad_primitive.bind();
+
+        // Bind node
+        self.quad_node
+            .bind(&self.read_depth_program, &na::Matrix4::identity());
+
+        // Draw
+        self.quad_primitive.draw();
+    }
+
+    /// Renders colors from offscreen framebuffer to the screen
+    pub fn blit_color<D: DrawableOnto>(&mut self, source: &CustomFramebuffer, target: &D) {
+        let color_texture = &source.color_textures[0];
+
+        let framebuffer = target.get_framebuffer();
+        framebuffer.bind();
+
+        unsafe {
+            gl::Viewport(
+                0,
+                0,
+                framebuffer.extent.width as _,
+                framebuffer.extent.height as _,
+            );
+            gl::ClearColor(0.0, 0.0, 0.0, 0.0);
+            gl::Clear(gl::COLOR_BUFFER_BIT | gl::DEPTH_BUFFER_BIT);
+        }
+
+        // Bind color read shader
+        self.read_color_program.enable();
+
+        // Bind extent
+        if self.read_color_program.loc.extent >= 0 {
+            unsafe {
+                gl::Uniform2f(
+                    self.read_color_program.loc.extent,
+                    color_texture.extent.width as f32,
+                    color_texture.extent.height as f32,
+                );
+            }
+        }
+
+        // Bind camera
+        self.screen_camera
+            .bind(&self.read_color_program, &self.screen_node);
+
+        // Bind texture
+        color_texture.bind();
+
+        // Bind quad
+        self.quad_primitive.bind();
+
+        // Bind node
+        self.quad_node
+            .bind(&self.read_color_program, &na::Matrix4::identity());
+
+        // Draw
+        self.quad_primitive.draw();
+    }
+
     /// This should be called after drawing everything to trigger the actual GL rendering.
-    pub fn present(&mut self, framebuffer: &Framebuffer, model: &Model) {
+    pub fn render_geometry<D: DrawableOnto>(&mut self, model: &Model, target: &D) {
         // Rendering should follow this approach
         // foreach prog in programs:
         //   bind(prog)
@@ -140,6 +345,27 @@ impl Renderer {
         //       bind(prim)
         //       foreach node in prim.nodes:
         //         bind(node) -> draw(prim)
+        let framebuffer = target.get_framebuffer();
+        framebuffer.bind();
+
+        unsafe {
+            gl::Viewport(
+                0,
+                0,
+                framebuffer.extent.width as _,
+                framebuffer.extent.height as _,
+            );
+
+            gl::Enable(gl::BLEND);
+            gl::BlendEquation(gl::FUNC_ADD);
+            gl::BlendFunc(gl::SRC_ALPHA, gl::ONE_MINUS_SRC_ALPHA);
+            gl::Enable(gl::CULL_FACE);
+            gl::Enable(gl::DEPTH_TEST);
+            gl::Disable(gl::SCISSOR_TEST);
+
+            gl::ClearColor(0.5, 0.5, 1.0, 0.0);
+            gl::Clear(gl::COLOR_BUFFER_BIT | gl::DEPTH_BUFFER_BIT);
+        }
 
         // Need to bind programs one at a time
         for (shader_id, material_ids) in self.shaders.iter() {

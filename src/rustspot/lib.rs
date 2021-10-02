@@ -23,13 +23,20 @@ pub use util::*;
 
 pub struct SpotBuilder {
     extent: Extent2D,
+    offscreen_extent: Extent2D,
 }
 
 impl SpotBuilder {
     pub fn new() -> Self {
         Self {
             extent: Extent2D::new(480, 320),
+            offscreen_extent: Extent2D::new(480, 320),
         }
+    }
+
+    pub fn extent(mut self, extent: Extent2D) -> Self {
+        self.extent = extent;
+        self
     }
 
     pub fn width(mut self, width: u32) -> Self {
@@ -42,8 +49,23 @@ impl SpotBuilder {
         self
     }
 
+    pub fn offscreen_extent(mut self, extent: Extent2D) -> Self {
+        self.offscreen_extent = extent;
+        self
+    }
+
+    pub fn offscreen_width(mut self, width: u32) -> Self {
+        self.offscreen_extent.width = width;
+        self
+    }
+
+    pub fn offscreen_height(mut self, height: u32) -> Self {
+        self.offscreen_extent.height = height;
+        self
+    }
+
     pub fn build(self) -> Spot {
-        Spot::new(self.extent)
+        Spot::new(self.extent, self.offscreen_extent)
     }
 }
 pub struct Spot {
@@ -58,11 +80,11 @@ impl Spot {
         SpotBuilder::new()
     }
 
-    pub fn new(extent: Extent2D) -> Self {
+    pub fn new(extent: Extent2D, offscreen_extent: Extent2D) -> Self {
         let sdl = sdl2::init().expect("Failed to initialize SDL2");
         let events = sdl.event_pump().expect("Failed to initialize SDL2 events");
 
-        let gfx = Gfx::new(&sdl, extent);
+        let gfx = Gfx::new(&sdl, extent, offscreen_extent);
         let gl_version = gfx.get_gl_version();
         println!("OpenGL v{}.{}", gl_version.0, gl_version.1);
 
