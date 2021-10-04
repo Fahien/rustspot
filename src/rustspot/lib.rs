@@ -12,6 +12,9 @@ pub use gui::*;
 pub mod frame;
 pub use frame::*;
 
+pub mod renderer;
+pub use renderer::*;
+
 pub mod gfx;
 pub use gfx::*;
 
