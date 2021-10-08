@@ -39,10 +39,18 @@ fn main() {
             .renderer
             .render_shadow(&model, &frame.shadow_buffer);
 
+        spot.gfx
+            .renderer
+            .draw(&model, &root, &na::Matrix4::identity());
+
+        spot.gfx
+            .renderer
+            .render_geometry(&model, &frame.geometry_buffer);
+
         // Draw a simple triangle which cover the whole screen
         spot.gfx
             .renderer
-            .blit_depth(&frame.shadow_buffer, &frame.default_framebuffer);
+            .blit_color(&frame.geometry_buffer, &frame.default_framebuffer);
 
         // Present to the screen
         spot.gfx.present(frame);
@@ -55,8 +63,8 @@ fn create_model(profile: sdl2::video::GLProfile) -> (Model, Handle<Node>) {
     // Shaders
     model.programs.push(ShaderProgram::open(
         profile,
-        "res/shader/vert.glsl",
-        "res/shader/frag.glsl",
+        "res/shader/light-shadow.vert.glsl",
+        "res/shader/light-shadow.frag.glsl",
     ));
 
     let root = model::create_structure_scene(&mut model);

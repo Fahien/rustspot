@@ -68,7 +68,9 @@ pub struct Loc {
     pub proj: i32,
     /// Model inverse transpose
     pub model_intr: i32,
+    pub light_space: i32,
     pub tex_sampler: i32,
+    pub shadow_sampler: i32,
     pub light_color: i32,
     pub light_direction: i32,
 }
@@ -86,7 +88,9 @@ impl Loc {
         let view = Loc::get_uniform_location(program_handle, "view");
         let proj = Loc::get_uniform_location(program_handle, "proj");
         let model_intr = Loc::get_uniform_location(program_handle, "model_intr");
+        let light_space = Loc::get_uniform_location(program_handle, "light_space");
         let tex_sampler = Loc::get_uniform_location(program_handle, "tex_sampler");
+        let shadow_sampler = Loc::get_uniform_location(program_handle, "shadow_sampler");
         let light_color = Loc::get_uniform_location(program_handle, "directional_light.color");
         let light_direction =
             Loc::get_uniform_location(program_handle, "directional_light.direction");
@@ -98,7 +102,9 @@ impl Loc {
             view,
             proj,
             model_intr,
+            light_space,
             tex_sampler,
+            shadow_sampler,
             light_color,
             light_direction,
         }

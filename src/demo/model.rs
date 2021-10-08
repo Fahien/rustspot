@@ -83,7 +83,7 @@ pub fn create_structure_scene(model: &mut Model) -> Handle<Node> {
         .directional_lights
         .push(DirectionalLight::color(1.0, 1.0, 1.0));
     let mut light_node = Node::new();
-    light_node.trs.translate(0.0, 0.0, 32.0);
+    light_node.trs.translate(2.0, 0.0, 8.0);
     light_node.trs.rotate(&na::UnitQuaternion::from_axis_angle(
         &na::Vector3::x_axis(),
         -std::f32::consts::FRAC_PI_4,
@@ -97,7 +97,8 @@ pub fn create_structure_scene(model: &mut Model) -> Handle<Node> {
     let mut camera_node = Node::new();
     camera_node.name = String::from("camera");
     camera_node.camera = camera;
-    camera_node.trs.translate(0.0, 0.4, 5.5);
+    camera_node.trs.rotate(&na::UnitQuaternion::from_axis_angle(&na::Vector3::x_axis(), -0.56));
+    camera_node.trs.translate(0.0, 3.0, 5.5);
     let camera_node = model.nodes.push(camera_node);
     root.children.push(camera_node);
 
@@ -111,7 +112,7 @@ pub fn create_structure_scene(model: &mut Model) -> Handle<Node> {
     floor.name = String::from("floor");
     floor.mesh = mesh;
     floor.trs.translate(0.0, -0.6, 0.0);
-    floor.trs.scale(4.0, 0.1, 4.0);
+    floor.trs.scale(16.0, 0.1, 16.0);
     root.children.push(model.nodes.push(floor));
 
     // White material

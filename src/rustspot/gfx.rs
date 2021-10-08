@@ -62,10 +62,23 @@ impl Texture {
                 std::ptr::null(),
             );
 
-            gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_WRAP_S, gl::REPEAT as i32);
-            gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_WRAP_T, gl::REPEAT as i32);
+            // Clamping to border is important for the shadowmap
+            gl::TexParameteri(
+                gl::TEXTURE_2D,
+                gl::TEXTURE_WRAP_S,
+                gl::CLAMP_TO_BORDER as i32,
+            );
+            gl::TexParameteri(
+                gl::TEXTURE_2D,
+                gl::TEXTURE_WRAP_T,
+                gl::CLAMP_TO_BORDER as i32,
+            );
+
             gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MIN_FILTER, gl::NEAREST as i32);
             gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MAG_FILTER, gl::NEAREST as i32);
+
+            let transparent: [f32; 4] = [1.0, 1.0, 1.0, 0.0];
+            gl::TexParameterfv(gl::TEXTURE_2D, gl::TEXTURE_BORDER_COLOR, &transparent as _);
         }
 
         texture
@@ -528,7 +541,7 @@ impl MeshRes {
 
 /// A node can refer to a camera to apply a transform to place it in the scene
 pub struct Camera {
-    proj: na::Matrix4<f32>,
+    pub proj: na::Matrix4<f32>,
 }
 
 impl Camera {
@@ -583,6 +596,10 @@ impl Trs {
         self.isometry
             .to_homogeneous()
             .prepend_nonuniform_scaling(&self.scale)
+    }
+
+    pub fn get_view(&self) -> na::Matrix4<f32> {
+        self.isometry.inverse().to_homogeneous()
     }
 
     pub fn rotate(&mut self, rotation: &na::Unit<na::Quaternion<f32>>) {
