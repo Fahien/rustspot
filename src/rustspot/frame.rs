@@ -133,6 +133,10 @@ impl Drop for Framebuffer {
 /// New trait
 pub trait DrawableOnto {
     fn get_framebuffer(&self) -> &Framebuffer;
+
+    fn get_depth_texture(&self) -> Option<&Texture> {
+        None
+    }
 }
 
 /// New structures
@@ -196,6 +200,10 @@ impl CustomFramebuffer {
 impl DrawableOnto for CustomFramebuffer {
     fn get_framebuffer(&self) -> &Framebuffer {
         &self.framebuffer
+    }
+
+    fn get_depth_texture(&self) -> Option<&Texture> {
+        self.depth_texture.as_ref()
     }
 }
 
