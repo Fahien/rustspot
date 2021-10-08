@@ -42,6 +42,11 @@ pub struct Renderer {
     /// Quad for rendering texture to screen
     pub quad_primitive: Primitive,
     pub quad_node: Node,
+
+    /// Used for shadows
+    pub light_space: na::Matrix4<f32>,
+    /// Handle to the shadowmap
+    pub shadow_map: u32,
 }
 
 impl Renderer {
@@ -90,6 +95,9 @@ impl Renderer {
 
             quad_primitive,
             quad_node,
+
+            light_space: na::Matrix4::identity(),
+            shadow_map: 0,
         }
     }
 
@@ -182,7 +190,8 @@ impl Renderer {
 
     /// Renders a shadowmap. It should be called after drawing.
     pub fn render_shadow<D: DrawableOnto>(&mut self, model: &Model, target: &D) {
-        // Offscreen framebuffer
+        self.shadow_map = target.get_depth_texture().unwrap().handle;
+
         let framebuffer = target.get_framebuffer();
         framebuffer.bind();
         unsafe {
@@ -215,6 +224,8 @@ impl Renderer {
             framebuffer.virtual_extent.height / 64,
         );
         camera.bind(&self.draw_shadow_program, light_node);
+        // Keep track for next pass
+        self.light_space = camera.proj * light_node.trs.get_view();
 
         // Draw the scene from the light point of view
         for (primitive_id, node_res) in self.primitives.iter() {
@@ -363,7 +374,7 @@ impl Renderer {
             gl::Enable(gl::DEPTH_TEST);
             gl::Disable(gl::SCISSOR_TEST);
 
-            gl::ClearColor(0.5, 0.5, 1.0, 0.0);
+            gl::ClearColor(0.2, 0.3, 0.5, 0.0);
             gl::Clear(gl::COLOR_BUFFER_BIT | gl::DEPTH_BUFFER_BIT);
         }
 
@@ -383,6 +394,12 @@ impl Renderer {
                 }
             }
 
+            // Associate texture units and samplers
+            unsafe {
+                gl::Uniform1i(shader.loc.tex_sampler, 0);
+                gl::Uniform1i(shader.loc.shadow_sampler, 1);
+            }
+
             // Bind directional light once for each shader
             if shader.loc.light_color >= 0 {
                 let node = model.nodes.get(&self.directional_light).unwrap();
@@ -391,6 +408,17 @@ impl Renderer {
                     .get(&node.directional_light)
                     .unwrap();
                 directional_light.bind(shader, node);
+                unsafe {
+                    gl::UniformMatrix4fv(
+                        shader.loc.light_space,
+                        1,
+                        gl::FALSE,
+                        self.light_space.as_ptr(),
+                    );
+                    gl::ActiveTexture(gl::TEXTURE1);
+                    gl::BindTexture(gl::TEXTURE_2D, self.shadow_map);
+                    gl::ActiveTexture(gl::TEXTURE0);
+                }
             };
 
             // Draw the scene from all the points of view
