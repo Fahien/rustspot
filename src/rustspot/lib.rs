@@ -62,6 +62,7 @@ pub struct Spot {
     pub timer: Timer,
     pub gfx: Gfx,
     pub events: sdl2::EventPump,
+    pub joystick: sdl2::JoystickSubsystem,
     pub sdl: sdl2::Sdl,
 }
 
@@ -72,6 +73,9 @@ impl Spot {
 
     pub fn new(extent: Extent2D, offscreen_extent: Extent2D) -> Self {
         let sdl = sdl2::init().expect("Failed to initialize SDL2");
+        let joystick = sdl
+            .joystick()
+            .expect("Failed to initialize SDL2 joystick subsystem");
         let events = sdl.event_pump().expect("Failed to initialize SDL2 events");
 
         let gfx = Gfx::new(&sdl, extent, offscreen_extent);
@@ -83,6 +87,7 @@ impl Spot {
         Spot {
             gfx,
             events,
+            joystick,
             sdl,
             timer,
         }
