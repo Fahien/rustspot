@@ -112,7 +112,10 @@ impl Framebuffer {
     }
 
     pub fn bind(&self) {
-        unsafe { gl::BindFramebuffer(gl::FRAMEBUFFER, self.handle) };
+        unsafe {
+            gl::BindFramebuffer(gl::FRAMEBUFFER, self.handle);
+            gl::Viewport(0, 0, self.extent.width as _, self.extent.height as _);
+        };
     }
 
     pub fn bind_default() {
