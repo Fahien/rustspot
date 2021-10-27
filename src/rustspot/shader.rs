@@ -157,6 +157,10 @@ impl ShaderProgram {
         ShaderProgram::new(vert, frag)
     }
 
+    pub fn get_uniform_location(&self, name: &str) -> i32 {
+        Loc::get_uniform_location(self.handle, name)
+    }
+
     pub fn enable(&self) {
         unsafe { gl::UseProgram(self.handle) };
     }

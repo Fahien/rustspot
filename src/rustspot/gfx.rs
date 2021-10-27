@@ -570,7 +570,7 @@ impl Camera {
     pub fn bind(&self, program: &ShaderProgram, view: &Node) {
         program.enable();
 
-        let view = view.trs.isometry.inverse().to_homogeneous();
+        let view = view.trs.get_view();
         unsafe {
             gl::UniformMatrix4fv(program.loc.view, 1, gl::FALSE, view.as_ptr());
             gl::UniformMatrix4fv(program.loc.proj, 1, gl::FALSE, self.proj.as_ptr());
@@ -590,6 +590,14 @@ impl Trs {
             isometry: na::Isometry3::identity(),
             scale: na::Vector3::new(1.0, 1.0, 1.0),
         }
+    }
+
+    pub fn get_translation(&self) -> na::Vector3<f32> {
+        na::Vector3::new(
+            self.isometry.translation.x,
+            self.isometry.translation.y,
+            self.isometry.translation.z,
+        )
     }
 
     pub fn get_matrix(&self) -> na::Matrix4<f32> {
@@ -618,9 +626,10 @@ impl Trs {
     }
 
     pub fn get_forward(&self) -> na::Vector3<f32> {
+        // This does not work
         self.isometry
-            .inverse()
-            .inverse_transform_vector(&-na::Vector3::z())
+            .rotation
+            .transform_vector(&-na::Vector3::z())
             .normalize()
     }
 }
@@ -763,6 +772,7 @@ impl Video {
             .opengl()
             .position_centered()
             .resizable()
+            .allow_highdpi()
             .build()
         {
             Ok(w) => w,

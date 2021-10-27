@@ -51,3 +51,7 @@ path = "src/demo/7-depth.rs"
 [[bin]]
 name = "8-shadow"
 path = "src/demo/8-shadow.rs"
+
+[[bin]]
+name = "9-skybox"
+path = "src/demo/9-skybox.rs"

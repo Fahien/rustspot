@@ -20,7 +20,7 @@ pub struct Renderer {
     point_lights: Vec<Handle<Node>>,
 
     /// List of camera handles to use while drawing the scene paired with the node to use
-    cameras: Vec<(Handle<Camera>, Handle<Node>)>,
+    pub cameras: Vec<(Handle<Camera>, Handle<Node>)>,
 
     /// List of material handles to bind with primitives referring to them.
     materials: HashMap<usize, Vec<usize>>,
@@ -47,6 +47,8 @@ pub struct Renderer {
     pub light_space: na::Matrix4<f32>,
     /// Handle to the shadowmap
     pub shadow_map: u32,
+
+    pub sky: Sky,
 }
 
 impl Renderer {
@@ -77,6 +79,8 @@ impl Renderer {
         let quad_primitive = Primitive::quad(Handle::none());
         let quad_node = Node::new();
 
+        let sky = Sky::new(profile);
+
         Renderer {
             gui_res: GuiRes::new(profile, fonts),
             shaders: HashMap::new(),
@@ -98,6 +102,7 @@ impl Renderer {
 
             light_space: na::Matrix4::identity(),
             shadow_map: 0,
+            sky,
         }
     }
 
@@ -372,6 +377,7 @@ impl Renderer {
             gl::BlendFunc(gl::SRC_ALPHA, gl::ONE_MINUS_SRC_ALPHA);
             gl::Enable(gl::CULL_FACE);
             gl::Enable(gl::DEPTH_TEST);
+            gl::DepthFunc(gl::LESS);
             gl::Disable(gl::SCISSOR_TEST);
 
             gl::ClearColor(0.2, 0.3, 0.5, 0.0);
@@ -454,6 +460,12 @@ impl Renderer {
                     }
                 }
             }
+        }
+
+        if self.sky.enabled {
+            let (_, camera_node) = self.cameras[0];
+            let camera_node = model.nodes.get(&camera_node).unwrap();
+            self.sky.draw(camera_node);
         }
 
         self.shaders.clear();
