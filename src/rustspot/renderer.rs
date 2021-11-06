@@ -8,6 +8,9 @@ use nalgebra as na;
 use std::collections::HashMap;
 
 pub struct Renderer {
+    /// Delta time used as a uniform in shaders
+    pub delta: f32,
+
     gui_res: GuiRes,
 
     /// List of shader handles to bind with materials referring to them.
@@ -82,6 +85,7 @@ impl Renderer {
         let sky = Sky::new(profile);
 
         Renderer {
+            delta: 0.0,
             gui_res: GuiRes::new(profile, fonts),
             shaders: HashMap::new(),
             directional_light: Handle::none(),
@@ -389,6 +393,13 @@ impl Renderer {
             let shader = &model.programs[*shader_id];
             shader.enable();
 
+            // Bind time
+            if shader.loc.time >= 0 {
+                unsafe {
+                    gl::Uniform1f(shader.loc.time, self.delta);
+                }
+            }
+
             // Bind extent
             if shader.loc.extent >= 0 {
                 unsafe {
@@ -455,6 +466,12 @@ impl Renderer {
                             }
 
                             model.nodes[*node_id].bind(shader, &transform);
+
+                            if shader.loc.instance_count >= 0 {
+                                unsafe {
+                                    gl::Uniform1i(shader.loc.instance_count, primitive.instance_count as _);
+                                }
+                            }
                             primitive.draw();
                         }
                     }
