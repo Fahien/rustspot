@@ -18,6 +18,9 @@ pub use sky::*;
 pub mod renderer;
 pub use renderer::*;
 
+pub mod mesh;
+pub use mesh::*;
+
 pub mod gfx;
 pub use gfx::*;
 
@@ -107,6 +110,8 @@ impl Spot {
             self.gfx.video.extent.width as f32,
             self.gfx.video.extent.height as f32,
         ];
+
+        self.gfx.renderer.delta += delta.as_secs_f32();
 
         delta
     }
