@@ -75,19 +75,21 @@ void main() {
 
     tex_coords = in_tex_coords;
 
-    // Randomize a bit the position of each blade
-    float instance_id = float(gl_InstanceID);
-    float random_weight = 2.0;
-    vec2 random_offset = random_weight * (rand2(vec2(instance_id)) - vec2(0.5));
-
     int stride = int(sqrt(instance_count));
+
+    // Randomize a bit the position of each blade
+    float instance_id = float(gl_InstanceID) / float(instance_count);
+    float random_weight = 2.0;
+    vec2 blade_offset = vec2(1.0 / 8.0);
+    vec2 rand0to1 = rand2(vec2(instance_id));
+    vec2 random_offset = random_weight * (rand0to1 - vec2(0.5)) + blade_offset;
+
     float column = float(gl_InstanceID % stride);
     float row = float(gl_InstanceID / stride);
-    float scale = 0.25;
-    float offset = 32.0;
+    float offset = float(stride) / 2.0;
     vec3 translation = vec3(0.0);
-    translation.x = (column - offset) * scale + random_offset.x;
-    translation.z = (row - offset) * scale + random_offset.y;
+    translation.x = (column - offset) * 0.25 + random_offset.x;
+    translation.z = (row - offset) * 0.25 + random_offset.y;
 
     float wind_speed = 1.0 / 32.0;
     float wind = worley(translation.xz / 32.0 + vec2(time) * wind_speed);

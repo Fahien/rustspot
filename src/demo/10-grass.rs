@@ -10,10 +10,15 @@ mod grass;
 use grass::*;
 
 fn main() {
-    let scale = 1;
+    let scale = 2;
     let width = scale * 480;
     let height = scale * 320;
-    let mut spot = Spot::builder().width(width).height(height).build();
+    let mut spot = Spot::builder()
+        .width(width)
+        .height(height)
+        .offscreen_width(width)
+        .offscreen_height(height)
+        .build();
     spot.gfx.renderer.sky.enabled = true;
 
     let mut grass = Grass::new(spot.gfx.video.profile);
@@ -67,6 +72,31 @@ fn main() {
                         .expect("Failed to open controller");
                     joysticks.push(joystick);
                 }
+                sdl2::event::Event::KeyDown {
+                    keycode: Some(code),
+                    ..
+                } => {
+                    use sdl2::keyboard::Keycode;
+                    let scale = temple.terrain.get_scale() * if code == Keycode::Up {
+                        2.0
+                    } else if code == Keycode::Down {
+                        0.5
+                    } else {
+                        1.0
+                    };
+
+                    temple.terrain.set_scale(&mut temple.model, scale);
+
+                    let blades_per_unit = temple.terrain.get_blades_per_unit() as f32 * if code == Keycode::Right {
+                        2.0
+                    } else if code == Keycode::Left {
+                        0.5
+                    } else {
+                        1.0
+                    };
+
+                    temple.terrain.set_blade_per_unit(&mut temple.model, blades_per_unit as u32);
+                }
                 _ => println!("{:?}", event),
             }
         }
@@ -92,6 +122,20 @@ fn main() {
         spot.gfx
             .renderer
             .blit_color(&frame.geometry_buffer, &frame.default_framebuffer);
+
+        // Start a new GUI frame
+        let ui = spot.gfx.gui.frame();
+
+        // Build GUI here before drawing it
+        imgui::Window::new(imgui::im_str!("Terrain"))
+            .size([300.0, 180.0], imgui::Condition::FirstUseEver)
+            .build(&ui, || {
+                ui.text(imgui::im_str!("scale: {}", temple.terrain.get_scale()));
+                ui.text(imgui::im_str!("blades per unit: {}", temple.terrain.get_blades_per_unit()));
+                ui.text(imgui::im_str!("blades: {}", temple.terrain.get_blade_count()));
+            });
+
+        spot.gfx.renderer.draw_gui(ui);
 
         // Present to the screen
         spot.gfx.present(frame);

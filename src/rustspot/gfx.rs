@@ -352,6 +352,12 @@ impl Trs {
             .append_translation_mut(&na::Translation3::new(x, y, z));
     }
 
+    pub fn set_scale(&mut self, x: f32, y: f32, z: f32) {
+        self.scale.x = x;
+        self.scale.y = y;
+        self.scale.z = z;
+    }
+
     pub fn scale(&mut self, x: f32, y: f32, z: f32) {
         self.scale.x *= x;
         self.scale.y *= y;
