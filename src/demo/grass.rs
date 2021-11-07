@@ -63,17 +63,17 @@ impl Grass {
         model.nodes.push(blade)
     }
 
-    fn create_ground(model: &mut Model, profile: GLProfile) -> Handle<Node> {
+    fn create_ground(model: &mut Model) -> Handle<Node> {
         // Ground shader
         let ground_shader = model.programs.push(ShaderProgram::open(
-            profile,
+            model.profile,
             "res/shader/light.vert.glsl",
             "res/shader/light-grass.frag.glsl",
         ));
 
         // Grass Shaders
         let grass_shader = model.programs.push(ShaderProgram::open(
-            profile,
+            model.profile,
             "res/shader/light-grass.vert.glsl",
             "res/shader/light-grass.frag.glsl",
         ));
@@ -109,7 +109,7 @@ impl Grass {
     }
 
     pub fn new(profile: GLProfile) -> Self {
-        let mut model = Model::new();
+        let mut model = Model::new(profile);
 
         // Shaders
         model.programs.push(ShaderProgram::open(
@@ -124,7 +124,7 @@ impl Grass {
         root.children.push(camera);
 
         root.children.push(Self::create_light(&mut model));
-        root.children.push(Self::create_ground(&mut model, profile));
+        root.children.push(Self::create_ground(&mut model));
 
         let root = model.nodes.push(root);
 

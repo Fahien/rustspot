@@ -29,7 +29,7 @@ fn main() {
                 sdl2::event::Event::MouseMotion { xrel, yrel, .. } => {
                     for node in model.nodes.iter_mut() {
                         if node.camera.valid() {
-                        let y_rotation = na::UnitQuaternion::from_axis_angle(
+                            let y_rotation = na::UnitQuaternion::from_axis_angle(
                                 &na::Vector3::x_axis(),
                                 yrel as f32 / height as f32,
                             );
@@ -115,7 +115,7 @@ fn main() {
 }
 
 fn create_model(profile: sdl2::video::GLProfile) -> (Model, Handle<Node>) {
-    let mut model = Model::new();
+    let mut model = Model::new(profile);
 
     // Shaders
     model.programs.push(ShaderProgram::open(

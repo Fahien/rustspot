@@ -41,7 +41,7 @@ fn main() {
 }
 
 fn create_model(profile: sdl2::video::GLProfile) -> (Model, Handle<Node>) {
-    let mut model = Model::new();
+    let mut model = Model::new(profile);
 
     // Shaders
     model.programs.push(ShaderProgram::open(
