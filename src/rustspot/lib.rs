@@ -15,6 +15,9 @@ pub use frame::*;
 pub mod sky;
 pub use sky::*;
 
+pub mod terrain;
+pub use terrain::*;
+
 pub mod renderer;
 pub use renderer::*;
 
