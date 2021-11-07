@@ -9,7 +9,7 @@ use sdl2::video::GLProfile;
 pub struct Temple {
     pub camera: Handle<Node>,
     pub root: Handle<Node>,
-    field: Terrain,
+    pub terrain: Terrain,
     pub model: Model,
 }
 
@@ -47,7 +47,7 @@ impl Temple {
 
     pub fn new(profile: GLProfile) -> Self {
         let mut model = Model::new(profile);
-        let field = Terrain::new(&mut model);
+        let terrain = Terrain::new(&mut model);
 
         // Shaders
         model.programs.push(ShaderProgram::open(
@@ -62,15 +62,16 @@ impl Temple {
         root.children.push(camera);
 
         root.children.push(Self::create_light(&mut model));
-        root.children.push(field.node);
+        root.children.push(terrain.root);
 
         let root = model.nodes.push(root);
 
         Self {
             camera,
             root,
-            field,
+            terrain,
             model,
         }
     }
+
 }
