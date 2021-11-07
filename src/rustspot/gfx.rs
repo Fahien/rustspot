@@ -423,10 +423,11 @@ pub struct Model {
     pub directional_lights: Pack<DirectionalLight>,
     pub point_lights: Pack<PointLight>,
     pub cameras: Pack<Camera>,
+    pub profile: sdl2::video::GLProfile,
 }
 
 impl Model {
-    pub fn new() -> Self {
+    pub fn new(profile: sdl2::video::GLProfile) -> Self {
         Self {
             programs: Pack::new(),
             textures: Pack::new(),
@@ -437,6 +438,7 @@ impl Model {
             directional_lights: Pack::new(),
             point_lights: Pack::new(),
             cameras: Pack::new(),
+            profile,
         }
     }
 }
