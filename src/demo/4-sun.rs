@@ -47,13 +47,6 @@ fn main() {
 fn create_model(profile: sdl2::video::GLProfile) -> (Model, Handle<Node>) {
     let mut model = Model::new(profile);
 
-    // Shaders
-    model.programs.push(ShaderProgram::open(
-        profile,
-        "res/shader/light-vert.glsl",
-        "res/shader/light-frag.glsl",
-    ));
-
     let color_textures = vec![
         model.textures.push(Texture::pixel(&[233, 225, 78, 255])), // yellow
         model.textures.push(Texture::pixel(&[170, 221, 84, 255])), // green
@@ -73,7 +66,9 @@ fn create_model(profile: sdl2::video::GLProfile) -> (Model, Handle<Node>) {
     // Create a material with the previous texture
     let mut materials = vec![];
     for texture in color_textures {
-        materials.push(model.materials.push(Material::new(texture)));
+        let mut material = Material::new(texture);
+        material.shader = Shaders::LIGHT;
+        materials.push(model.materials.push(material));
     }
 
     // Create a primitive quad with the previous material

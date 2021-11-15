@@ -9,12 +9,8 @@ in mediump vec4 pos_light_space;
 
 uniform sampler2D tex_sampler;
 
-struct DirectionalLight {
-    vec3 color;
-    vec3 direction;
-};
-
-uniform DirectionalLight directional_light;
+uniform vec3 light_color;
+uniform vec3 light_direction;
 
 void main() {
     float aw = 0.3;
@@ -23,8 +19,8 @@ void main() {
     out_color = ambient * albedo;
 
     float dw = 1.0 - aw;
-    float df = max(dot(normalize(normal), normalize(directional_light.direction)), 0.0);
+    float df = max(dot(normalize(normal), normalize(light_direction)), 0.0);
     vec4 diffuse = vec4(dw * df, dw * df, dw * df, 1.0);
 
-    out_color += diffuse * vec4(directional_light.color, 1.0) * albedo;
+    out_color += diffuse * vec4(light_color, 1.0) * albedo;
 }

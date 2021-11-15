@@ -13,8 +13,10 @@ pub struct Renderer {
 
     gui_res: GuiRes,
 
-    /// List of shader handles to bind with materials referring to them.
-    shaders: HashMap<usize, Vec<usize>>,
+    custom_shaders: Vec<Box<dyn CustomShader>>,
+
+    /// List of shader enums to bind with materials referring to them.
+    shaders: HashMap<Shaders, Vec<usize>>,
 
     /// Node with the directional light to use for rendering
     directional_light: Handle<Node>,
@@ -31,9 +33,6 @@ pub struct Renderer {
     /// List of primitive handles to draw with nodes referring to them.
     /// Together with nodes, we store their transform matrix computed during the scene graph traversal.
     primitives: HashMap<usize, HashMap<usize, na::Matrix4<f32>>>,
-
-    /// Shader program used to draw a shadow map
-    pub draw_shadow_program: ShaderProgram,
 
     pub read_depth_program: ShaderProgram,
     pub read_color_program: ShaderProgram,
@@ -56,21 +55,15 @@ pub struct Renderer {
 
 impl Renderer {
     pub fn new(profile: sdl2::video::GLProfile, fonts: &mut imgui::FontAtlasRefMut) -> Renderer {
-        let draw_shadow_program = ShaderProgram::open(
-            profile,
-            "res/shader/depth-vert.glsl",
-            "res/shader/depth-frag.glsl",
-        );
-
         let read_depth_program = ShaderProgram::open(
             profile,
-            "res/shader/vert.glsl",
+            "res/shader/default-vert.glsl",
             "res/shader/read-depth-frag.glsl",
         );
 
         let read_color_program = ShaderProgram::open(
             profile,
-            "res/shader/vert.glsl",
+            "res/shader/default-vert.glsl",
             "res/shader/read-color-frag.glsl",
         );
 
@@ -87,6 +80,7 @@ impl Renderer {
         Renderer {
             delta: 0.0,
             gui_res: GuiRes::new(profile, fonts),
+            custom_shaders: create_shaders(profile),
             shaders: HashMap::new(),
             directional_light: Handle::none(),
             point_lights: Vec::new(),
@@ -94,7 +88,6 @@ impl Renderer {
             materials: HashMap::new(),
             primitives: HashMap::new(),
 
-            draw_shadow_program,
             read_depth_program,
             read_color_program,
 
@@ -133,7 +126,7 @@ impl Renderer {
                 let material = model.materials.get(&primitive.material).unwrap();
 
                 // Store this association shader program, material
-                let key = material.shader.id;
+                let key = material.shader;
                 if let Some(shader_materials) = self.shaders.get_mut(&key) {
                     // Add this material id to the value list of not already there
                     if !shader_materials.contains(&primitive.material.id) {
@@ -223,7 +216,8 @@ impl Renderer {
         }
 
         // Draw only depth
-        self.draw_shadow_program.enable();
+        let draw_shadow_program = &self.custom_shaders[Shaders::DEPTH as usize];
+        draw_shadow_program.bind();
 
         // Bind directional light as camera view
         let light_node = model.nodes.get(&self.directional_light).unwrap();
@@ -232,7 +226,7 @@ impl Renderer {
             framebuffer.virtual_extent.width / 64,
             framebuffer.virtual_extent.height / 64,
         );
-        camera.bind(&self.draw_shadow_program, light_node);
+        draw_shadow_program.bind_camera(&camera, &light_node);
         // Keep track for next pass
         self.light_space = camera.proj * light_node.trs.get_view();
 
@@ -241,9 +235,10 @@ impl Renderer {
             let primitive = &model.primitives[*primitive_id];
 
             // Bind the primitive, bind the nodes using that primitive, draw the primitive.
-            primitive.bind();
+            draw_shadow_program.bind_primitive(&primitive);
             for (node_id, transform) in node_res.iter() {
-                model.nodes[*node_id].bind(&self.draw_shadow_program, &transform);
+                let node = &model.nodes[*node_id];
+                draw_shadow_program.bind_node(node, &transform);
                 primitive.draw();
             }
         }
@@ -389,60 +384,28 @@ impl Renderer {
         }
 
         // Need to bind programs one at a time
-        for (shader_id, material_ids) in self.shaders.iter() {
-            let shader = &model.programs[*shader_id];
-            shader.enable();
-
-            // Bind time
-            if shader.loc.time >= 0 {
-                unsafe {
-                    gl::Uniform1f(shader.loc.time, self.delta);
-                }
-            }
-
-            // Bind extent
-            if shader.loc.extent >= 0 {
-                unsafe {
-                    gl::Uniform2f(
-                        shader.loc.extent,
-                        framebuffer.virtual_extent.width as f32,
-                        framebuffer.virtual_extent.height as f32,
-                    );
-                }
-            }
-
-            // Associate texture units and samplers
-            unsafe {
-                gl::Uniform1i(shader.loc.tex_sampler, 0);
-                gl::Uniform1i(shader.loc.shadow_sampler, 1);
-            }
-
-            // Bind directional light once for each shader
-            if shader.loc.light_color >= 0 {
-                let node = model.nodes.get(&self.directional_light).unwrap();
-                let directional_light = model
+        for (&shader_id, material_ids) in self.shaders.iter() {
+            let shader = &self.custom_shaders[shader_id as usize];
+            shader.bind();
+            shader.bind_time(self.delta);
+            shader.bind_extent(
+                framebuffer.virtual_extent.width as f32,
+                framebuffer.virtual_extent.height as f32,
+            );
+            if let Some(light_node) = model.nodes.get(&self.directional_light) {
+                let light = model
                     .directional_lights
-                    .get(&node.directional_light)
+                    .get(&light_node.directional_light)
                     .unwrap();
-                directional_light.bind(shader, node);
-                unsafe {
-                    gl::UniformMatrix4fv(
-                        shader.loc.light_space,
-                        1,
-                        gl::FALSE,
-                        self.light_space.as_ptr(),
-                    );
-                    gl::ActiveTexture(gl::TEXTURE1);
-                    gl::BindTexture(gl::TEXTURE_2D, self.shadow_map);
-                    gl::ActiveTexture(gl::TEXTURE0);
-                }
-            };
+                shader.bind_sun(&light.color, light_node, &self.light_space);
+            }
+            shader.bind_shadow(self.shadow_map);
 
             // Draw the scene from all the points of view
             for (camera_handle, camera_node_handle) in self.cameras.iter() {
                 let camera = model.cameras.get(&camera_handle).unwrap();
                 let camera_node = model.nodes.get(&camera_node_handle).unwrap();
-                camera.bind(shader, camera_node);
+                shader.bind_camera(camera, camera_node);
 
                 // Need to bind materials for a group of primitives that use the same one
                 for material_id in material_ids.iter() {
@@ -456,22 +419,12 @@ impl Renderer {
                         assert!(primitive.material.valid());
 
                         // Bind the primitive, bind the nodes using that primitive, draw the primitive.
-                        primitive.bind();
+                        shader.bind_primitive(primitive);
                         let node_res = &self.primitives[primitive_id];
-                        for (node_id, transform) in node_res.iter() {
-                            if shader.loc.node_id >= 0 {
-                                unsafe {
-                                    gl::Uniform1i(shader.loc.node_id, *node_id as i32);
-                                }
-                            }
+                        for (&node_id, transform) in node_res.iter() {
+                            let node = &model.nodes[node_id];
+                            shader.bind_node(node, transform);
 
-                            model.nodes[*node_id].bind(shader, &transform);
-
-                            if shader.loc.instance_count >= 0 {
-                                unsafe {
-                                    gl::Uniform1i(shader.loc.instance_count, primitive.instance_count as _);
-                                }
-                            }
                             primitive.draw();
                         }
                     }
@@ -480,9 +433,13 @@ impl Renderer {
         }
 
         if self.sky.enabled {
+            let sky_shader = self.custom_shaders[Shaders::SKY as usize]
+                .as_any()
+                .downcast_ref()
+                .unwrap();
             let (_, camera_node) = self.cameras[0];
             let camera_node = model.nodes.get(&camera_node).unwrap();
-            self.sky.draw(camera_node);
+            self.sky.draw(sky_shader as _, camera_node);
         }
 
         self.shaders.clear();

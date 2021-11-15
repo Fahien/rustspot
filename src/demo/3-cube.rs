@@ -43,13 +43,6 @@ fn main() {
 fn create_model(profile: sdl2::video::GLProfile) -> (Model, Handle<Node>) {
     let mut model = Model::new(profile);
 
-    // Shaders
-    model.programs.push(ShaderProgram::open(
-        profile,
-        "res/shader/vert.glsl",
-        "res/shader/frag.glsl",
-    ));
-
     let color_textures = vec![
         model.textures.push(Texture::pixel(&[233, 225, 78, 255])), // yellow
         model.textures.push(Texture::pixel(&[170, 221, 84, 255])), // green

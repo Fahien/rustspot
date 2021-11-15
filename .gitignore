@@ -4,3 +4,4 @@ res/doc
 .vscode
 imgui.ini
 SDL2.*
+src/rustspot/shaders.rs

@@ -65,19 +65,6 @@ fn main() {
 fn create_model(profile: sdl2::video::GLProfile) -> (Model, Handle<Node>) {
     let mut model = Model::new(profile);
 
-    // Shaders
-    model.programs.push(ShaderProgram::open(
-        profile,
-        "res/shader/vert.glsl",
-        "res/shader/frag.glsl",
-    ));
-
-    let fancy_shader = model.programs.push(ShaderProgram::open(
-        profile,
-        "res/shader/fancy_vert.glsl",
-        "res/shader/fancy_frag.glsl",
-    ));
-
     let texture = model.textures.push(Texture::open("res/img/lena.png"));
 
     // Create a material with the previous texture
@@ -85,7 +72,7 @@ fn create_model(profile: sdl2::video::GLProfile) -> (Model, Handle<Node>) {
 
     // Create a fancy material
     let mut fancy_material = Material::new(texture);
-    fancy_material.shader = fancy_shader;
+    fancy_material.shader = Shaders::FANCY;
     let fancy_material = model.materials.push(fancy_material);
 
     // Create a primitive quad with the previous material

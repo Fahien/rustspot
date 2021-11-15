@@ -43,8 +43,6 @@ impl SkyColor {
 }
 
 pub struct Sky {
-    shader: ShaderProgram,
-    loc: SkyLoc,
     colors: Vec<SkyColor>,
     primitive: Primitive,
     pub enabled: bool,
@@ -52,14 +50,6 @@ pub struct Sky {
 
 impl Sky {
     pub fn new(profile: sdl2::video::GLProfile) -> Sky {
-        let shader = ShaderProgram::open(
-            profile,
-            "res/shader/sky-vert.glsl",
-            "res/shader/sky-frag.glsl",
-        );
-
-        let loc = SkyLoc::new(&shader);
-
         let colors = vec![SkyColor::new(
             [254.0 / 255.0, 254.0 / 255.0, 202.0 / 255.0],
             [98.0 / 255.0, 203.0 / 255.0, 251.0 / 255.0],
@@ -68,25 +58,27 @@ impl Sky {
         let primitive = Primitive::quad(Handle::none());
 
         Sky {
-            shader,
-            loc,
             colors,
             primitive,
             enabled: false,
         }
     }
 
-    pub fn draw(&self, camera: &Node) {
+    pub fn draw(&self, shader: &SkyShader, camera: &Node) {
         unsafe {
             gl::Disable(gl::CULL_FACE);
             gl::DepthFunc(gl::LEQUAL);
         }
 
-        self.shader.enable();
-        self.loc.set_color(&self.colors[0]);
+        shader.bind();
+
+        unsafe {
+            gl::Uniform3fv(shader.loc.horizon, 1, self.colors[0].horizon.as_ptr());
+            gl::Uniform3fv(shader.loc.zenit, 1, self.colors[0].zenit.as_ptr());
+        }
 
         let transform = camera.trs.get_matrix();
-        camera.bind(&self.shader, &transform);
+        shader.bind_node(&camera, &transform);
         self.primitive.bind();
         self.primitive.draw();
     }

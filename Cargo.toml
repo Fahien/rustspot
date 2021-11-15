@@ -4,6 +4,9 @@ version = "0.1.0"
 authors = ["Antonio Caggiano <info@antoniocaggiano.eu>"]
 edition = "2018"
 
+[build-dependencies]
+glsl = "6.0"
+
 [dependencies]
 libc = "0.2.79"
 gl = "0.14.0"
