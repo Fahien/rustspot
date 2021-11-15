@@ -157,14 +157,14 @@ impl Drop for Texture {
 }
 
 pub struct Material {
-    pub shader: Handle<ShaderProgram>,
+    pub shader: Shaders,
     texture: Handle<Texture>,
 }
 
 impl Material {
     pub fn new(texture: Handle<Texture>) -> Self {
         Self {
-            shader: Handle::new(0),
+            shader: Shaders::DEFAULT,
             texture,
         }
     }
@@ -375,6 +375,7 @@ impl Trs {
 
 #[derive(Clone)]
 pub struct Node {
+    pub id: u32,
     pub name: String,
     pub trs: Trs,
     pub mesh: Handle<Mesh>,
@@ -387,6 +388,7 @@ pub struct Node {
 impl Node {
     pub fn new() -> Self {
         Node {
+            id: 0,
             name: String::new(),
             trs: Trs::new(),
             mesh: Handle::none(),
@@ -419,7 +421,6 @@ impl std::fmt::Debug for Node {
 }
 
 pub struct Model {
-    pub programs: Pack<ShaderProgram>,
     pub textures: Pack<Texture>,
     pub materials: Pack<Material>,
     pub primitives: Pack<Primitive>,
@@ -434,7 +435,6 @@ pub struct Model {
 impl Model {
     pub fn new(profile: sdl2::video::GLProfile) -> Self {
         Self {
-            programs: Pack::new(),
             textures: Pack::new(),
             materials: Pack::new(),
             primitives: Pack::new(),

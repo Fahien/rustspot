@@ -9,7 +9,6 @@ const MARGIN: f32 = 2.0;
 const BLADE_COUNT: u32 = 16;
 
 pub struct Terrain {
-    grass_shader: Handle<ShaderProgram>,
     pub plane: Handle<Node>,
     pub grass: Handle<Node>,
     pub root: Handle<Node>,
@@ -18,10 +17,10 @@ pub struct Terrain {
 }
 
 impl Terrain {
-    fn create_grass_blade(model: &mut Model, grass_shader: Handle<ShaderProgram>) -> Handle<Node> {
+    fn create_grass_blade(model: &mut Model) -> Handle<Node> {
         let texture = model.textures.push(Texture::pixel(&[31, 100, 32, 255]));
         let mut material = Material::new(texture);
-        material.shader = grass_shader;
+        material.shader = Shaders::LIGHTGRASS;
 
         let material = model.materials.push(material);
         let mut primitive = Primitive::triangle(material);
@@ -38,16 +37,10 @@ impl Terrain {
     }
 
     fn create_plane(model: &mut Model) -> Handle<Node> {
-        let plane_shader = model.programs.push(ShaderProgram::open(
-            model.profile,
-            "res/shader/light-vert.glsl",
-            "res/shader/light-grass-frag.glsl",
-        ));
-
         // Plane material
         let texture = model.textures.push(Texture::pixel(&[31, 100, 32, 255]));
         let mut material = Material::new(texture);
-        material.shader = plane_shader;
+        material.shader = Shaders::LIGHT;
 
         let material = model.materials.push(material);
 
@@ -76,17 +69,10 @@ impl Terrain {
     }
 
     pub fn new(model: &mut Model) -> Self {
-        let grass_shader = model.programs.push(ShaderProgram::open(
-            model.profile,
-            "res/shader/light-grass-vert.glsl",
-            "res/shader/light-grass-frag.glsl",
-        ));
-
         let plane = Self::create_plane(model);
-        let grass = Self::create_grass_blade(model, grass_shader);
+        let grass = Self::create_grass_blade(model);
 
         Self {
-            grass_shader,
             plane,
             grass,
             root: Self::create_ground(model, plane, grass),

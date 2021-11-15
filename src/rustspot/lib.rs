@@ -1,7 +1,10 @@
-pub mod shader;
 use std::time::Duration;
 
+pub mod shader;
 pub use shader::*;
+
+pub mod shaders;
+pub use shaders::*;
 
 pub mod light;
 pub use light::*;

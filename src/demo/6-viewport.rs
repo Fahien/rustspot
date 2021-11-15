@@ -69,13 +69,6 @@ fn main() {
 fn create_model(profile: sdl2::video::GLProfile) -> (Model, Handle<Node>) {
     let mut model = Model::new(profile);
 
-    // Shaders
-    model.programs.push(ShaderProgram::open(
-        profile,
-        "res/shader/vert.glsl",
-        "res/shader/frag.glsl",
-    ));
-
     let texture = model.textures.push(Texture::open("res/img/lena.png"));
 
     // Create a material with the previous texture

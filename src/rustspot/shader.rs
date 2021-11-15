@@ -1,3 +1,6 @@
+use crate::*;
+use nalgebra as na;
+use std::any::Any;
 use std::{ffi::CString, fs::File, io::Read, path::Path};
 
 pub struct Shader {
@@ -176,4 +179,17 @@ impl Drop for ShaderProgram {
     fn drop(&mut self) {
         unsafe { gl::DeleteProgram(self.handle) };
     }
+}
+
+pub trait CustomShader {
+    fn as_any(&self) -> &dyn Any;
+
+    fn bind(&self);
+    fn bind_time(&self, delta: f32) {}
+    fn bind_extent(&self, width: f32, height: f32) {}
+    fn bind_sun(&self, light_color: &[f32; 3], light_node: &Node, light_space: &na::Matrix4<f32>) {}
+    fn bind_shadow(&self, shadow_map: u32) {}
+    fn bind_camera(&self, camera: &Camera, camera_node: &Node) {}
+    fn bind_primitive(&self, primitive: &Primitive) {}
+    fn bind_node(&self, node: &Node, transform: &na::Matrix4<f32>) {}
 }

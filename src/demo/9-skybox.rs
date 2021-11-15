@@ -116,15 +116,6 @@ fn main() {
 
 fn create_model(profile: sdl2::video::GLProfile) -> (Model, Handle<Node>) {
     let mut model = Model::new(profile);
-
-    // Shaders
-    model.programs.push(ShaderProgram::open(
-        profile,
-        "res/shader/light-shadow.vert.glsl",
-        "res/shader/light-shadow.frag.glsl",
-    ));
-
     let root = model::create_structure_scene(&mut model);
-
     (model, root)
 }

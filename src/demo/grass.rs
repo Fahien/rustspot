@@ -49,13 +49,6 @@ impl Grass {
         let mut model = Model::new(profile);
         let terrain = Terrain::new(&mut model);
 
-        // Shaders
-        model.programs.push(ShaderProgram::open(
-            profile,
-            "res/shader/light-shadow.vert.glsl",
-            "res/shader/light-shadow.frag.glsl",
-        ));
-
         let mut root = Node::new();
 
         let camera = Self::create_camera(&mut model);

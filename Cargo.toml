@@ -7,6 +7,9 @@ edition = "2018"
 [profile.dev.package."*"]
 opt-level = 3
 
+[build-dependencies]
+glsl = "6.0"
+
 [dependencies]
 libc = "0.2.79"
 gl = "0.14.0"

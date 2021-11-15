@@ -10,12 +10,8 @@ in mediump vec4 pos_light_space;
 uniform sampler2D tex_sampler;
 uniform sampler2D shadow_sampler;
 
-struct DirectionalLight {
-    vec3 color;
-    vec3 direction;
-};
-
-uniform DirectionalLight directional_light;
+uniform vec3 light_color;
+uniform vec3 light_direction;
 
 float calculate_shadow(vec4 pos_light_space) {
     // Perspective divide so pos is in range [-1, 1]
@@ -27,7 +23,7 @@ float calculate_shadow(vec4 pos_light_space) {
     float current_depth = pos.z;
 
     vec3 normal = normalize(normal);
-    vec3 light_dir = normalize(directional_light.direction);
+    vec3 light_dir = normalize(light_direction);
     float bias = max(0.005 * (1.0 - dot(normal, light_dir)), 0.0005);
     // Greater depth means it is further away
     float shadow = current_depth - bias > closest_depth ? 0.5 : 1.0;
@@ -42,10 +38,10 @@ void main() {
     out_color = ambient * albedo;
 
     float dw = 1.0 - aw;
-    float df = max(dot(normalize(normal), normalize(directional_light.direction)), 0.0);
+    float df = max(dot(normalize(normal), normalize(light_direction)), 0.0);
     vec4 diffuse = vec4(dw * df, dw * df, dw * df, 1.0);
 
     float shadow = calculate_shadow(pos_light_space);
 
-    out_color += shadow * diffuse * vec4(directional_light.color, 1.0) * albedo;
+    out_color += shadow * diffuse * vec4(light_color, 1.0) * albedo;
 }
