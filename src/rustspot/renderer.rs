@@ -239,7 +239,7 @@ impl Renderer {
             for (node_id, transform) in node_res.iter() {
                 let node = &model.nodes[*node_id];
                 draw_shadow_program.bind_node(node, &transform);
-                primitive.draw();
+                draw_shadow_program.draw(node, primitive);
             }
         }
 
@@ -425,7 +425,7 @@ impl Renderer {
                             let node = &model.nodes[node_id];
                             shader.bind_node(node, transform);
 
-                            primitive.draw();
+                            shader.draw(node, primitive);
                         }
                     }
                 }

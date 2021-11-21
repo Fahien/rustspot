@@ -87,7 +87,7 @@ fn main() {
 
                     temple.terrain.set_scale(&mut temple.model, scale);
 
-                    let blades_per_unit = temple.terrain.get_blades_per_unit() as f32 * if code == Keycode::Right {
+                    let blades_per_unit = temple.terrain.get_instances_per_unit() as f32 * if code == Keycode::Right {
                         2.0
                     } else if code == Keycode::Left {
                         0.5
@@ -95,7 +95,7 @@ fn main() {
                         1.0
                     };
 
-                    temple.terrain.set_blade_per_unit(&mut temple.model, blades_per_unit as u32);
+                    temple.terrain.set_instance_per_unit(&mut temple.model, blades_per_unit as u32);
                 }
                 _ => println!("{:?}", event),
             }
@@ -131,8 +131,8 @@ fn main() {
             .size([300.0, 180.0], imgui::Condition::FirstUseEver)
             .build(&ui, || {
                 ui.text(imgui::im_str!("scale: {}", temple.terrain.get_scale()));
-                ui.text(imgui::im_str!("blades per unit: {}", temple.terrain.get_blades_per_unit()));
-                ui.text(imgui::im_str!("blades: {}", temple.terrain.get_blade_count()));
+                ui.text(imgui::im_str!("blades per unit: {}", temple.terrain.get_instances_per_unit()));
+                ui.text(imgui::im_str!("blades: {}", temple.terrain.get_instance_count()));
             });
 
         spot.gfx.renderer.draw_gui(ui);

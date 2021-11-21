@@ -192,4 +192,6 @@ pub trait CustomShader {
     fn bind_camera(&self, camera: &Camera, camera_node: &Node) {}
     fn bind_primitive(&self, primitive: &Primitive) {}
     fn bind_node(&self, node: &Node, transform: &na::Matrix4<f32>) {}
+
+    fn draw(&self, node: &Node, primitive: &Primitive);
 }

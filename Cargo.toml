@@ -17,6 +17,8 @@ png = "0.16.7"
 nalgebra = "0.22.0"
 imgui = "0.5.0"
 sdl2 = "0.34.3"
+noise = "0.7.0"
+rayon = "1.5.1"
 
 # Keep lib and bin at the end for the CI script
 [lib]
