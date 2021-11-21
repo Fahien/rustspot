@@ -334,6 +334,20 @@ impl CustomShader for {}Shader {{
 "#,
         );
 
+        if uniform_strings.contains("models") {
+            generated_code.push_str(r#"
+            let instance_count = std::cmp::max(1, node.transforms.len());
+            unsafe {
+                gl::Uniform1i(
+                    self.loc.instance_count,
+                    instance_count as _,
+                );
+                gl::UniformMatrix4fv(self.loc.models, instance_count as _, gl::FALSE, node.transforms.as_ptr() as _);
+            }
+"#,
+    );
+        }
+
         if uniform_strings.contains("model_intr") {
             generated_code.push_str(
                 r#"
@@ -366,22 +380,69 @@ impl CustomShader for {}Shader {{
         r#"
     fn bind_primitive(&self, primitive: &Primitive) {
         primitive.bind();
+    }
 "#,
     );
 
     if uniform_strings.contains("instance_count") {
+        // Draw method
+        generated_code.push_str(r#"
+    fn draw(&self, node: &Node, primitive: &Primitive) {
+        let instance_count = std::cmp::max(1, node.transforms.len());
+
+        if instance_count == 0 {
+            unsafe {
+                gl::DrawElements(
+                    gl::TRIANGLES,
+                    primitive.indices.len() as _,
+                    gl::UNSIGNED_INT,
+                    0 as _,
+                );
+            }
+        } else {
+            let mut remaining_instance_count = instance_count;
+            let draw_calls = ((instance_count - 1) / 128) + 1;
+            for i in 0..draw_calls {
+                let batch_count = std::cmp::min(remaining_instance_count, 128);
+                remaining_instance_count -= batch_count;
+                unsafe {
+                    gl::Uniform1i(
+                        self.loc.instance_count,
+                        instance_count as _,
+                    );
+
+                    gl::UniformMatrix4fv(self.loc.models, batch_count as _, gl::FALSE, node.transforms[i * 128].as_ptr() as _);
+
+                    gl::DrawElementsInstanced(
+                        gl::TRIANGLES,
+                        primitive.indices.len() as _,
+                        gl::UNSIGNED_INT,
+                        0 as _,
+                        batch_count as _,
+                    );
+                }
+            }
+        }
+    }
+}
+"#);
+    } else {
         generated_code.push_str(
             r#"
+    fn draw(&self, node: &Node, primitive: &Primitive) {
         unsafe {
-            gl::Uniform1i(
-                self.loc.instance_count,
-                primitive.instance_count as _,
+            gl::DrawElements(
+                gl::TRIANGLES,
+                primitive.indices.len() as _,
+                gl::UNSIGNED_INT,
+                0 as _,
             );
-        }"#,
+        }
+    }
+}
+"#,
         );
     }
-
-    generated_code.push_str("    }\n}\n");
 
     Ok(generated_code)
 }

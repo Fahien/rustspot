@@ -5,6 +5,8 @@ layout (location = 3) in vec3 in_normal;
 
 uniform int instance_count;
 uniform mat4 model;
+// There is a limit of 256 uniforms per shader
+uniform mat4 models[128];
 uniform mat4 view;
 uniform mat4 proj;
 uniform mat3 model_intr;
@@ -75,21 +77,12 @@ void main() {
 
     tex_coords = in_tex_coords;
 
-    int stride = int(sqrt(instance_count));
-
-    // Randomize a bit the position of each blade
-    float instance_id = float(gl_InstanceID) / float(instance_count);
-    float random_weight = 2.0;
-    vec2 blade_offset = vec2(1.0 / 8.0);
-    vec2 rand0to1 = rand2(vec2(instance_id));
-    vec2 random_offset = random_weight * (rand0to1 - vec2(0.5)) + blade_offset;
-
-    float column = float(gl_InstanceID % stride);
-    float row = float(gl_InstanceID / stride);
-    float offset = float(stride) / 2.0;
-    vec3 translation = vec3(0.0);
-    translation.x = (column - offset) * 0.25 + random_offset.x;
-    translation.z = (row - offset) * 0.25 + random_offset.y;
+    mat4 instance_model = models[gl_InstanceID];
+    vec3 translation = vec3(
+        instance_model[3][0],
+        instance_model[3][1],
+        instance_model[3][2]
+    );
 
     float wind_speed = 1.0 / 32.0;
     float wind = worley(translation.xz / 32.0 + vec2(time) * wind_speed);
@@ -100,9 +93,8 @@ void main() {
     float wind_strength = 1.0;
     mat3 rotation = rot_from_axis_angle(wind_direction, wind * wind_strength * in_pos.y);
 
-    // First rotate, then translate
-    mat4 model_tmp = mat4(rotation) * model;
-    model_tmp[3] = vec4(translation, 1.0);
+    // Rotate first, then translate
+    mat4 model_tmp = instance_model * mat4(rotation) * model;
 
     // Update normal with our new model matrix
     normal = inverse(transpose(mat3(model_tmp))) * in_normal;

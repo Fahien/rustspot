@@ -80,15 +80,13 @@ impl MeshRes {
 /// Geometry to be rendered with a given material
 pub struct Primitive {
     _vertices: Vec<Vertex>,
-    indices: Vec<u32>,
+    pub indices: Vec<u32>,
     pub material: Handle<Material>,
 
     // Res could be computed on the fly, but we would need to hash both vertices and indices,
     // therefore we store it here and it is responsibility of the scene builder to avoid an
     // explosion of primitive resources at run-time.
     res: MeshRes,
-
-    pub instance_count: u32,
 }
 
 impl Primitive {
@@ -124,7 +122,6 @@ impl Primitive {
             indices,
             material,
             res,
-            instance_count: 1,
         }
     }
 
@@ -165,7 +162,6 @@ impl Primitive {
             indices,
             material,
             res,
-            instance_count: 1,
         }
     }
 
@@ -274,7 +270,6 @@ impl Primitive {
             indices,
             material,
             res,
-            instance_count: 1,
         }
     }
 
@@ -285,25 +280,13 @@ impl Primitive {
     }
 
     pub fn draw(&self) {
-        if self.instance_count <= 1 {
-            unsafe {
-                gl::DrawElements(
-                    gl::TRIANGLES,
-                    self.indices.len() as _,
-                    gl::UNSIGNED_INT,
-                    0 as _,
-                );
-            }
-        } else {
-            unsafe {
-                gl::DrawElementsInstanced(
-                    gl::TRIANGLES,
-                    self.indices.len() as _,
-                    gl::UNSIGNED_INT,
-                    0 as _,
-                    self.instance_count as _,
-                );
-            }
+        unsafe {
+            gl::DrawElements(
+                gl::TRIANGLES,
+                self.indices.len() as _,
+                gl::UNSIGNED_INT,
+                0 as _,
+            );
         }
     }
 }

@@ -380,6 +380,8 @@ pub struct Node {
     pub name: String,
     pub trs: Trs,
     pub mesh: Handle<Mesh>,
+    /// Transform matrices when it needs to draw instanced meshes.
+    pub transforms: Vec<na::Matrix4<f32>>,
     pub directional_light: Handle<DirectionalLight>,
     pub point_light: Handle<PointLight>,
     pub camera: Handle<Camera>,
@@ -393,6 +395,7 @@ impl Node {
             name: String::new(),
             trs: Trs::new(),
             mesh: Handle::none(),
+            transforms: vec![],
             directional_light: Handle::none(),
             point_light: Handle::none(),
             camera: Handle::none(),
