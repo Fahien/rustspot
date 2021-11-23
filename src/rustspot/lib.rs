@@ -27,6 +27,9 @@ pub use renderer::*;
 pub mod mesh;
 pub use mesh::*;
 
+pub mod node;
+pub use node::*;
+
 pub mod gfx;
 pub use gfx::*;
 

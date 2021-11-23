@@ -373,56 +373,6 @@ impl Trs {
     }
 }
 
-#[derive(Clone)]
-pub struct Node {
-    pub id: u32,
-    pub name: String,
-    pub trs: Trs,
-    pub mesh: Handle<Mesh>,
-    /// Transform matrices when it needs to draw instanced meshes.
-    pub transforms: Vec<na::Matrix4<f32>>,
-    pub directional_light: Handle<DirectionalLight>,
-    pub point_light: Handle<PointLight>,
-    pub camera: Handle<Camera>,
-    pub children: Vec<Handle<Node>>,
-}
-
-impl Node {
-    pub fn new() -> Self {
-        Node {
-            id: 0,
-            name: String::new(),
-            trs: Trs::new(),
-            mesh: Handle::none(),
-            transforms: vec![],
-            directional_light: Handle::none(),
-            point_light: Handle::none(),
-            camera: Handle::none(),
-            children: vec![],
-        }
-    }
-
-    pub fn bind(&self, program: &ShaderProgram, transform: &na::Matrix4<f32>) {
-        let intr = transform
-            .remove_column(3)
-            .remove_row(3)
-            .try_inverse()
-            .unwrap();
-        unsafe {
-            gl::UniformMatrix4fv(program.loc.model, 1, gl::FALSE, transform.as_ptr());
-            if program.loc.model_intr >= 0 {
-                gl::UniformMatrix3fv(program.loc.model_intr, 1, gl::TRUE, intr.as_ptr());
-            }
-        }
-    }
-}
-
-impl std::fmt::Debug for Node {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        write!(f, "Node {}", self.name)
-    }
-}
-
 pub struct Model {
     pub textures: Pack<Texture>,
     pub materials: Pack<Material>,
