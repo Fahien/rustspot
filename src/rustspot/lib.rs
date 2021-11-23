@@ -30,6 +30,9 @@ pub use mesh::*;
 pub mod node;
 pub use node::*;
 
+pub mod input;
+pub use input::*;
+
 pub mod gfx;
 pub use gfx::*;
 
@@ -83,7 +86,9 @@ impl SpotBuilder {
         Spot::new(self.extent, self.offscreen_extent)
     }
 }
+
 pub struct Spot {
+    pub input: Input,
     pub timer: Timer,
     pub gfx: Gfx,
     pub events: sdl2::EventPump,
@@ -109,7 +114,10 @@ impl Spot {
 
         let timer = Timer::new();
 
+        let input = Input::new();
+
         Spot {
+            input,
             gfx,
             events,
             joystick,
@@ -124,11 +132,13 @@ impl Spot {
         // Update GUI
         let ui = self.gfx.gui.io_mut();
         ui.update_delta_time(delta);
-        // TODO Should this update be here or somewhere else?
+        // TODO Should this update be here or somewhere else? Like a RustSpot GUI wrapper
         ui.display_size = [
             self.gfx.video.extent.width as f32,
             self.gfx.video.extent.height as f32,
         ];
+        ui.mouse_down = self.input.mouse_down;
+        ui.mouse_pos = self.input.mouse_pos;
 
         self.gfx.renderer.delta += delta.as_secs_f32();
 

@@ -17,6 +17,8 @@ fn main() {
     'gameloop: loop {
         // Handle SDL2 events
         for event in spot.events.poll_iter() {
+            spot.input.handle(&event);
+
             match event {
                 sdl2::event::Event::Quit { .. } => break 'gameloop,
                 _ => println!("{:?}", event),
@@ -59,6 +61,8 @@ fn main() {
 
         // Present to the screen
         spot.gfx.present(frame);
+
+        spot.input.reset();
     }
 }
 

@@ -45,7 +45,8 @@ impl GuiRes {
 
         void main()
         {
-            out_color = color * texture(tex_sampler, tex_coords);
+            vec4 alpha = vec4(1.0, 1.0, 1.0, 0.75);
+            out_color = alpha * color * texture(tex_sampler, tex_coords);
         }
         "#;
 
