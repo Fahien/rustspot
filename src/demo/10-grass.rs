@@ -135,7 +135,7 @@ fn main() {
                 ui.text(imgui::im_str!("blades: {}", temple.terrain.get_instance_count()));
             });
 
-        spot.gfx.renderer.draw_gui(ui);
+        spot.gfx.renderer.render_gui(ui, &frame.default_framebuffer);
 
         // Present to the screen
         spot.gfx.present(frame);

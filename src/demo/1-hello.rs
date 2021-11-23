@@ -55,7 +55,7 @@ fn main() {
                 ui.text("Hello world!");
             });
 
-        spot.gfx.renderer.draw_gui(ui);
+        spot.gfx.renderer.render_gui(ui, &frame.default_framebuffer);
 
         // Present to the screen
         spot.gfx.present(frame);

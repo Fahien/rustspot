@@ -48,7 +48,7 @@ fn main() {
                 ui.text(imgui::im_str!("nodes: {}", model.nodes.len()));
             });
 
-        spot.gfx.renderer.draw_gui(ui);
+        spot.gfx.renderer.render_gui(ui, &frame.default_framebuffer);
 
         // Present to the screen
         spot.gfx.present(frame);

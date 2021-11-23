@@ -449,7 +449,9 @@ impl Renderer {
         self.primitives.clear();
     }
 
-    pub fn draw_gui(&mut self, ui: imgui::Ui) {
+    pub fn render_gui<D: DrawableOnto>(&mut self, ui: imgui::Ui, target: &D) {
+        target.get_framebuffer().bind();
+
         let [width, height] = ui.io().display_size;
         let [scale_w, scale_h] = ui.io().display_framebuffer_scale;
         let fb_width = width * scale_w;

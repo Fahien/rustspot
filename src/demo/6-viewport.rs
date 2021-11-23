@@ -59,7 +59,7 @@ fn main() {
             .renderer
             .blit_color(&frame.geometry_buffer, &frame.default_framebuffer);
 
-        spot.gfx.renderer.draw_gui(ui);
+        spot.gfx.renderer.render_gui(ui, &frame.default_framebuffer);
 
         // Present to the screen
         spot.gfx.present(frame);
