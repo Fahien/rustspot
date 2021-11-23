@@ -21,7 +21,7 @@ fn main() {
         .build();
     spot.gfx.renderer.sky.enabled = true;
 
-    let mut grass = Grass::new(spot.gfx.video.profile);
+    let mut grass = Grass::new();
 
     let mut joysticks = vec![];
 

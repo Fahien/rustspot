@@ -15,7 +15,7 @@ fn main() {
     let mut spot = Spot::builder().width(width).height(height).build();
     spot.gfx.renderer.sky.enabled = true;
 
-    let (mut model, root) = create_model(spot.gfx.video.profile);
+    let (mut model, root) = create_model();
 
     let mut joysticks = vec![];
 
@@ -114,8 +114,8 @@ fn main() {
     }
 }
 
-fn create_model(profile: sdl2::video::GLProfile) -> (Model, Handle<Node>) {
-    let mut model = Model::new(profile);
+fn create_model() -> (Model, Handle<Node>) {
+    let mut model = Model::new();
     let root = model::create_structure_scene(&mut model);
     (model, root)
 }

@@ -9,7 +9,7 @@ use rustspot::*;
 fn main() {
     let mut spot = Spot::builder().build();
 
-    let (mut model, root) = create_model(spot.gfx.video.profile);
+    let (mut model, root) = create_model();
 
     let mut step = 0.5;
     let mut red = 0.0;
@@ -62,8 +62,8 @@ fn main() {
     }
 }
 
-fn create_model(profile: sdl2::video::GLProfile) -> (Model, Handle<Node>) {
-    let mut model = Model::new(profile);
+fn create_model() -> (Model, Handle<Node>) {
+    let mut model = Model::new();
 
     let texture = model.textures.push(Texture::open("res/img/lena.png"));
 

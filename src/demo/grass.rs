@@ -45,8 +45,8 @@ impl Grass {
         model.nodes.push(light_node)
     }
 
-    pub fn new(profile: GLProfile) -> Self {
-        let mut model = Model::new(profile);
+    pub fn new() -> Self {
+        let mut model = Model::new();
         let terrain = Terrain::new(&mut model);
 
         let mut root = Node::new();

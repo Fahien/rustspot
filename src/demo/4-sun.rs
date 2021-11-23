@@ -9,7 +9,7 @@ use rustspot::*;
 fn main() {
     let mut spot = Spot::builder().build();
 
-    let (mut model, root) = create_model(spot.gfx.video.profile);
+    let (mut model, root) = create_model();
 
     'gameloop: loop {
         // Handle SDL2 events
@@ -44,8 +44,8 @@ fn main() {
     }
 }
 
-fn create_model(profile: sdl2::video::GLProfile) -> (Model, Handle<Node>) {
-    let mut model = Model::new(profile);
+fn create_model() -> (Model, Handle<Node>) {
+    let mut model = Model::new();
 
     let color_textures = vec![
         model.textures.push(Texture::pixel(&[233, 225, 78, 255])), // yellow
