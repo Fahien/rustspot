@@ -84,8 +84,7 @@ impl Terrain {
         let texture = model
             .textures
             .push(Texture::pixel(Color::rgba(31, 100, 32, 255)));
-        let mut material = Material::builder().texture(texture).build();
-        material.shader = Shaders::LIGHT;
+        let material = Material::builder().texture(texture).build();
 
         let material = model.materials.push(material);
 

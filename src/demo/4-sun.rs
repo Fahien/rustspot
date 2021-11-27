@@ -92,10 +92,7 @@ fn create_model() -> (Model, Handle<Node>) {
     // Create a material with the previous texture
     let mut materials = vec![];
     for texture in color_textures {
-        let material = Material::builder()
-            .texture(texture)
-            .shader(Shaders::LIGHT)
-            .build();
+        let material = Material::builder().texture(texture).build();
         materials.push(model.materials.push(material));
     }
 

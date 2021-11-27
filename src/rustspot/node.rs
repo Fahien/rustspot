@@ -14,6 +14,9 @@ pub struct NodeBuilder {
     pub scale: na::Vector3<f32>,
     pub matrix: na::Matrix4<f32>,
     pub children: Vec<Handle<Node>>,
+    pub mesh: Option<Handle<Mesh>>,
+    pub camera: Option<Handle<Camera>>,
+    pub directional_light: Option<Handle<DirectionalLight>>,
 }
 
 impl NodeBuilder {
@@ -26,6 +29,9 @@ impl NodeBuilder {
             scale: na::Vector3::new(1.0, 1.0, 1.0),
             matrix: na::Matrix4::identity(),
             children: vec![],
+            mesh: None,
+            camera: None,
+            directional_light: None,
         }
     }
 
@@ -64,6 +70,21 @@ impl NodeBuilder {
         self
     }
 
+    pub fn mesh(mut self, mesh: Handle<Mesh>) -> Self {
+        self.mesh = Some(mesh);
+        self
+    }
+
+    pub fn camera(mut self, camera: Handle<Camera>) -> Self {
+        self.camera = Some(camera);
+        self
+    }
+
+    pub fn directional_light(mut self, light: Handle<DirectionalLight>) -> Self {
+        self.directional_light = Some(light);
+        self
+    }
+
     pub fn build(self) -> Node {
         let mut node = Node::new();
         node.id = self.id;
@@ -74,6 +95,15 @@ impl NodeBuilder {
         .translate(self.translation.x, self.translation.y, self.translation.z);
 
         node.children = self.children;
+        if let Some(mesh) = self.mesh {
+            node.mesh = mesh;
+        }
+        if let Some(camera) = self.camera {
+            node.camera = camera;
+        }
+        if let Some(light) = self.directional_light {
+            node.directional_light = light;
+        }
         node
     }
 }

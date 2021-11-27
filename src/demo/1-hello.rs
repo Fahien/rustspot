@@ -72,9 +72,12 @@ fn create_model() -> (Model, Handle<Node>) {
     let texture = model.textures.push(Texture::open("res/img/lena.png"));
 
     // Create a material with the previous texture
-    let material = model
-        .materials
-        .push(Material::builder().texture(texture).build());
+    let material = model.materials.push(
+        Material::builder()
+            .texture(texture)
+            .shader(Shaders::UNLIT)
+            .build(),
+    );
 
     // Create a fancy material
     let fancy_material = Material::builder()

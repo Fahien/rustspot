@@ -89,9 +89,12 @@ fn create_model() -> (Model, Handle<Node>) {
     let mut materials = vec![];
     for texture in color_textures {
         materials.push(
-            model
-                .materials
-                .push(Material::builder().texture(texture).build()),
+            model.materials.push(
+                Material::builder()
+                    .texture(texture)
+                    .shader(Shaders::UNLIT)
+                    .build(),
+            ),
         );
     }
 

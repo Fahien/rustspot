@@ -57,13 +57,13 @@ impl Renderer {
     pub fn new(profile: sdl2::video::GLProfile, fonts: &mut imgui::FontAtlasRefMut) -> Renderer {
         let read_depth_program = ShaderProgram::open(
             profile,
-            "res/shader/default.vert.glsl",
+            "res/shader/unlit.vert.glsl",
             "res/shader/read-depth.frag.glsl",
         );
 
         let read_color_program = ShaderProgram::open(
             profile,
-            "res/shader/default.vert.glsl",
+            "res/shader/unlit.vert.glsl",
             "res/shader/read-color.frag.glsl",
         );
 
