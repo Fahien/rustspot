@@ -66,7 +66,9 @@ fn create_model() -> (Model, Handle<Node>) {
     let texture = model.textures.push(Texture::open("res/img/lena.png"));
 
     // Create a material with the previous texture
-    let material = model.materials.push(Material::new(texture));
+    let material = model
+        .materials
+        .push(Material::builder().texture(texture).build());
 
     // Create a primitive quad with the previous material
     let primitive = model.primitives.push(Primitive::quad(material));

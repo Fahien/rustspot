@@ -48,26 +48,54 @@ fn create_model() -> (Model, Handle<Node>) {
     let mut model = Model::new();
 
     let color_textures = vec![
-        model.textures.push(Texture::pixel(&[233, 225, 78, 255])), // yellow
-        model.textures.push(Texture::pixel(&[170, 221, 84, 255])), // green
-        model.textures.push(Texture::pixel(&[145, 209, 125, 255])),
-        model.textures.push(Texture::pixel(&[106, 174, 185, 255])), // cyan
-        model.textures.push(Texture::pixel(&[87, 137, 210, 255])),  // blue
-        model.textures.push(Texture::pixel(&[103, 114, 194, 255])),
-        model.textures.push(Texture::pixel(&[110, 95, 162, 255])), // purple
-        model.textures.push(Texture::pixel(&[128, 102, 149, 255])),
-        model.textures.push(Texture::pixel(&[183, 105, 119, 255])), // red
-        model.textures.push(Texture::pixel(&[212, 103, 98, 255])),
-        model.textures.push(Texture::pixel(&[224, 138, 3, 255])), // orange
-        model.textures.push(Texture::pixel(&[236, 195, 79, 255])),
-        model.textures.push(Texture::pixel(&[233, 225, 78, 255])), // yellow
+        model
+            .textures
+            .push(Texture::pixel(Color::rgba(233, 225, 78, 255))), // yellow
+        model
+            .textures
+            .push(Texture::pixel(Color::rgba(170, 221, 84, 255))), // green
+        model
+            .textures
+            .push(Texture::pixel(Color::rgba(145, 209, 125, 255))),
+        model
+            .textures
+            .push(Texture::pixel(Color::rgba(106, 174, 185, 255))), // cyan
+        model
+            .textures
+            .push(Texture::pixel(Color::rgba(87, 137, 210, 255))), // blue
+        model
+            .textures
+            .push(Texture::pixel(Color::rgba(103, 114, 194, 255))),
+        model
+            .textures
+            .push(Texture::pixel(Color::rgba(110, 95, 162, 255))), // purple
+        model
+            .textures
+            .push(Texture::pixel(Color::rgba(128, 102, 149, 255))),
+        model
+            .textures
+            .push(Texture::pixel(Color::rgba(183, 105, 119, 255))), // red
+        model
+            .textures
+            .push(Texture::pixel(Color::rgba(212, 103, 98, 255))),
+        model
+            .textures
+            .push(Texture::pixel(Color::rgba(224, 138, 3, 255))), // orange
+        model
+            .textures
+            .push(Texture::pixel(Color::rgba(236, 195, 79, 255))),
+        model
+            .textures
+            .push(Texture::pixel(Color::rgba(233, 225, 78, 255))), // yellow
     ];
 
     // Create a material with the previous texture
     let mut materials = vec![];
     for texture in color_textures {
-        let mut material = Material::new(texture);
-        material.shader = Shaders::LIGHT;
+        let material = Material::builder()
+            .texture(texture)
+            .shader(Shaders::LIGHT)
+            .build();
         materials.push(model.materials.push(material));
     }
 

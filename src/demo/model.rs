@@ -97,15 +97,22 @@ pub fn create_structure_scene(model: &mut Model) -> Handle<Node> {
     let mut camera_node = Node::new();
     camera_node.name = String::from("camera");
     camera_node.camera = camera;
-    camera_node.trs.rotate(&na::UnitQuaternion::from_axis_angle(&na::Vector3::x_axis(), -0.56));
+    camera_node.trs.rotate(&na::UnitQuaternion::from_axis_angle(
+        &na::Vector3::x_axis(),
+        -0.56,
+    ));
     camera_node.trs.translate(0.0, 3.0, 5.5);
     let camera_node = model.nodes.push(camera_node);
     root.children.push(camera_node);
 
     // Cyan material
-    let texture = model.textures.push(Texture::pixel(&[160, 170, 180, 255]));
-    let mut material = Material::new(texture);
-    material.shader = Shaders::LIGHTSHADOW;
+    let texture = model
+        .textures
+        .push(Texture::pixel(Color::rgba(160, 170, 180, 255)));
+    let material = Material::builder()
+        .texture(texture)
+        .shader(Shaders::LIGHTSHADOW)
+        .build();
     let material = model.materials.push(material);
     let primitives = vec![model.primitives.push(Primitive::cube(material))];
     let mesh = model.meshes.push(Mesh::new(primitives));
@@ -118,9 +125,13 @@ pub fn create_structure_scene(model: &mut Model) -> Handle<Node> {
     root.children.push(model.nodes.push(floor));
 
     // White material
-    let texture = model.textures.push(Texture::pixel(&[255, 255, 255, 255]));
-    let mut material = Material::new(texture);
-    material.shader = Shaders::LIGHTSHADOW;
+    let texture = model
+        .textures
+        .push(Texture::pixel(Color::rgba(255, 255, 255, 255)));
+    let material = Material::builder()
+        .texture(texture)
+        .shader(Shaders::LIGHTSHADOW)
+        .build();
     let material = model.materials.push(material);
     let primitives = vec![model.primitives.push(Primitive::cube(material))];
     let mesh = model.meshes.push(Mesh::new(primitives));

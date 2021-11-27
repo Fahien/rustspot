@@ -72,11 +72,15 @@ fn create_model() -> (Model, Handle<Node>) {
     let texture = model.textures.push(Texture::open("res/img/lena.png"));
 
     // Create a material with the previous texture
-    let material = model.materials.push(Material::new(texture));
+    let material = model
+        .materials
+        .push(Material::builder().texture(texture).build());
 
     // Create a fancy material
-    let mut fancy_material = Material::new(texture);
-    fancy_material.shader = Shaders::FANCY;
+    let fancy_material = Material::builder()
+        .texture(texture)
+        .shader(Shaders::FANCY)
+        .build();
     let fancy_material = model.materials.push(fancy_material);
 
     // Create a primitive quad with the previous material

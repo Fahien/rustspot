@@ -60,8 +60,10 @@ impl Terrain {
     }
 
     fn create_grass_blade(model: &mut Model) -> Handle<Node> {
-        let texture = model.textures.push(Texture::pixel(&[31, 100, 32, 255]));
-        let mut material = Material::new(texture);
+        let texture = model
+            .textures
+            .push(Texture::pixel(Color::rgba(31, 100, 32, 255)));
+        let mut material = Material::builder().texture(texture).build();
         material.shader = Shaders::LIGHTGRASS;
 
         let material = model.materials.push(material);
@@ -79,8 +81,10 @@ impl Terrain {
 
     fn create_plane(model: &mut Model) -> Handle<Node> {
         // Plane material
-        let texture = model.textures.push(Texture::pixel(&[31, 100, 32, 255]));
-        let mut material = Material::new(texture);
+        let texture = model
+            .textures
+            .push(Texture::pixel(Color::rgba(31, 100, 32, 255)));
+        let mut material = Material::builder().texture(texture).build();
         material.shader = Shaders::LIGHT;
 
         let material = model.materials.push(material);

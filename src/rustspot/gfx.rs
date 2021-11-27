@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::fs::File;
 use std::path::Path;
 
@@ -22,6 +23,37 @@ impl Vertex {
             tex_coords: [0.0, 0.0],
             normal: [0.0, 0.0, 1.0],
         }
+    }
+}
+
+#[derive(Copy, Clone, Hash, PartialEq, Eq)]
+pub struct Color {
+    pub r: u8,
+    pub g: u8,
+    pub b: u8,
+    pub a: u8,
+}
+
+impl Color {
+    pub fn new() -> Self {
+        Self {
+            r: 255,
+            g: 255,
+            b: 255,
+            a: 255,
+        }
+    }
+
+    pub fn rgba(r: u8, g: u8, b: u8, a: u8) -> Self {
+        Self { r, g, b, a }
+    }
+
+    pub fn as_ptr(&self) -> *const u8 {
+        &self.r
+    }
+
+    pub fn as_slice(&self) -> &[u8] {
+        unsafe { std::slice::from_raw_parts(self.as_ptr(), 4) }
     }
 }
 
@@ -93,9 +125,9 @@ impl Texture {
     }
 
     /// Creates a one pixel texture with the RGBA color passed as argument
-    pub fn pixel(data: &[u8; 4]) -> Self {
+    pub fn pixel(data: Color) -> Self {
         let mut texture = Self::new();
-        texture.upload(1, 1, data);
+        texture.upload(1, 1, data.as_slice());
         texture
     }
 
@@ -152,26 +184,6 @@ impl Drop for Texture {
     fn drop(&mut self) {
         unsafe {
             gl::DeleteTextures(1, &self.handle);
-        }
-    }
-}
-
-pub struct Material {
-    pub shader: Shaders,
-    texture: Handle<Texture>,
-}
-
-impl Material {
-    pub fn new(texture: Handle<Texture>) -> Self {
-        Self {
-            shader: Shaders::DEFAULT,
-            texture,
-        }
-    }
-
-    pub fn bind(&self, textures: &Pack<Texture>) {
-        if let Some(texture) = textures.get(self.texture) {
-            texture.bind();
         }
     }
 }
@@ -374,6 +386,7 @@ impl Trs {
 }
 
 pub struct Model {
+    pub colors: HashMap<Color, Texture>,
     pub textures: Pack<Texture>,
     pub materials: Pack<Material>,
     pub primitives: Pack<Primitive>,
@@ -387,6 +400,7 @@ pub struct Model {
 impl Model {
     pub fn new() -> Self {
         Self {
+            colors: HashMap::new(),
             textures: Pack::new(),
             materials: Pack::new(),
             primitives: Pack::new(),
