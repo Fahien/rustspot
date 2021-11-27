@@ -33,7 +33,7 @@ fn main() {
             match event {
                 sdl2::event::Event::Quit { .. } => break 'gameloop,
                 sdl2::event::Event::MouseMotion { xrel, yrel, .. } => {
-                    let node = grass.model.nodes.get_mut(&grass.camera).unwrap();
+                    let node = grass.model.nodes.get_mut(grass.camera).unwrap();
                     let y_rotation = na::UnitQuaternion::from_axis_angle(
                         &na::Vector3::x_axis(),
                         yrel as f32 / height as f32,
@@ -46,7 +46,7 @@ fn main() {
                     node.trs.rotate(&rotation);
                 }
                 sdl2::event::Event::MouseWheel { y, .. } => {
-                    let node = grass.model.nodes.get_mut(&grass.camera).unwrap();
+                    let node = grass.model.nodes.get_mut(grass.camera).unwrap();
                     let forward = node.trs.get_forward().scale(y as f32);
                     node.trs.translate(forward.x, forward.y, forward.z);
                 }
@@ -54,7 +54,7 @@ fn main() {
                     axis_idx, value, ..
                 } => {
                     if axis_idx == 0 || axis_idx == 1 {
-                        let node = grass.model.nodes.get_mut(&grass.camera).unwrap();
+                        let node = grass.model.nodes.get_mut(grass.camera).unwrap();
                         let axis = if axis_idx == 0 {
                             na::Vector3::y_axis()
                         } else {
@@ -77,25 +77,29 @@ fn main() {
                     ..
                 } => {
                     use sdl2::keyboard::Keycode;
-                    let scale = temple.terrain.get_scale() * if code == Keycode::Up {
-                        2.0
-                    } else if code == Keycode::Down {
-                        0.5
-                    } else {
-                        1.0
-                    };
+                    let scale = grass.terrain.get_scale()
+                        * if code == Keycode::Up {
+                            2.0
+                        } else if code == Keycode::Down {
+                            0.5
+                        } else {
+                            1.0
+                        };
 
-                    temple.terrain.set_scale(&mut temple.model, scale);
+                    grass.terrain.set_scale(&mut grass.model, scale);
 
-                    let blades_per_unit = temple.terrain.get_instances_per_unit() as f32 * if code == Keycode::Right {
-                        2.0
-                    } else if code == Keycode::Left {
-                        0.5
-                    } else {
-                        1.0
-                    };
+                    let blades_per_unit = grass.terrain.get_instances_per_unit() as f32
+                        * if code == Keycode::Right {
+                            2.0
+                        } else if code == Keycode::Left {
+                            0.5
+                        } else {
+                            1.0
+                        };
 
-                    temple.terrain.set_instance_per_unit(&mut temple.model, blades_per_unit as u32);
+                   grass 
+                        .terrain
+                        .set_instance_per_unit(&mut grass.model, blades_per_unit as u32);
                 }
                 _ => println!("{:?}", event),
             }
@@ -103,7 +107,7 @@ fn main() {
 
         spot.gfx
             .renderer
-            .draw(&grass.model, &grass.root, &na::Matrix4::identity());
+            .draw(&grass.model, grass.root, &na::Matrix4::identity());
 
         let frame = spot.gfx.next_frame();
         spot.gfx
@@ -112,7 +116,7 @@ fn main() {
 
         spot.gfx
             .renderer
-            .draw(&grass.model, &grass.root, &na::Matrix4::identity());
+            .draw(&grass.model, grass.root, &na::Matrix4::identity());
 
         spot.gfx
             .renderer
@@ -130,9 +134,15 @@ fn main() {
         imgui::Window::new(imgui::im_str!("Terrain"))
             .size([300.0, 180.0], imgui::Condition::FirstUseEver)
             .build(&ui, || {
-                ui.text(imgui::im_str!("scale: {}", temple.terrain.get_scale()));
-                ui.text(imgui::im_str!("blades per unit: {}", temple.terrain.get_instances_per_unit()));
-                ui.text(imgui::im_str!("blades: {}", temple.terrain.get_instance_count()));
+                ui.text(imgui::im_str!("scale: {}", grass.terrain.get_scale()));
+                ui.text(imgui::im_str!(
+                    "blades per unit: {}",
+                    grass.terrain.get_instances_per_unit()
+                ));
+                ui.text(imgui::im_str!(
+                    "blades: {}",
+                    grass.terrain.get_instance_count()
+                ));
             });
 
         spot.gfx.renderer.render_gui(ui, &frame.default_framebuffer);

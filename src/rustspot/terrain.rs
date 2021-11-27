@@ -126,12 +126,12 @@ impl Terrain {
 
     fn update_instance_count(&mut self, model: &mut Model) {
         let transforms = self.create_transforms();
-        let grass = model.nodes.get_mut(&self.grass).unwrap();
+        let grass = model.nodes.get_mut(self.grass).unwrap();
         grass.transforms = transforms;
     }
 
     fn update_plane_scale(&mut self, model: &mut Model) {
-        let plane = model.nodes.get_mut(&self.plane).unwrap();
+        let plane = model.nodes.get_mut(self.plane).unwrap();
         let margin = 2.0;
         plane.trs.set_scale(
             self.scale + margin,

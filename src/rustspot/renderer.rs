@@ -105,40 +105,36 @@ impl Renderer {
 
     /// Draw does not render immediately, instead it creates a list of mesh resources.
     /// At the same time it computes transform matrices for each node to be bound later on.
-    pub fn draw(
-        &mut self,
-        model: &Model,
-        node_handle: &Handle<Node>,
-        transform: &na::Matrix4<f32>,
-    ) {
+    pub fn draw(&mut self, model: &Model, node_handle: Handle<Node>, transform: &na::Matrix4<f32>) {
         // Precompute transform matrix
         let node = &model.nodes[node_handle.id];
         let temp_transform = transform * node.trs.get_matrix();
 
         // The current node
-        let node = model.nodes.get(&node_handle).unwrap();
+        let node = model.nodes.get(node_handle).unwrap();
 
         // Here we add this to a list of nodes that should be rendered
-        let mesh = &node.mesh;
-        if let Some(mesh) = model.meshes.get(&mesh) {
-            for primitive_handle in mesh.primitives.iter() {
-                let primitive = model.primitives.get(&primitive_handle).unwrap();
-                let material = model.materials.get(&primitive.material).unwrap();
+        let mesh = node.mesh;
+        if let Some(mesh) = model.meshes.get(mesh) {
+            for &primitive_handle in mesh.primitives.iter() {
+                let primitive = model.primitives.get(primitive_handle).unwrap();
+                let material_handle = primitive.material;
+                let material = model.materials.get(material_handle).unwrap();
 
                 // Store this association shader program, material
                 let key = material.shader;
                 if let Some(shader_materials) = self.shaders.get_mut(&key) {
                     // Add this material id to the value list of not already there
-                    if !shader_materials.contains(&primitive.material.id) {
-                        shader_materials.push(primitive.material.id);
+                    if !shader_materials.contains(&material_handle.id) {
+                        shader_materials.push(material_handle.id);
                     }
                 } else {
                     // Create a new entry (shader, material)
-                    self.shaders.insert(key, vec![primitive.material.id]);
+                    self.shaders.insert(key, vec![material_handle.id]);
                 }
 
                 // Store this association material, primitive
-                let key = primitive.material.id;
+                let key = material_handle.id;
                 // Check if an entry already exists
                 if let Some(material_primitives) = self.materials.get_mut(&key) {
                     // Add this primitive id to the value list if not already there
@@ -168,24 +164,24 @@ impl Renderer {
         // Check if current node has a directional light and set it for rendering
         if model
             .directional_lights
-            .get(&node.directional_light)
+            .get(node.directional_light)
             .is_some()
         {
-            self.directional_light = *node_handle;
+            self.directional_light = node_handle;
         }
 
         // Check if current node has a point light and add it to the current list
-        if model.point_lights.get(&node.point_light).is_some() {
-            self.point_lights.push(*node_handle);
+        if model.point_lights.get(node.point_light).is_some() {
+            self.point_lights.push(node_handle);
         }
 
         // Here we check if the current node has a camera, just add it
-        if model.cameras.get(&node.camera).is_some() {
-            self.cameras.push((node.camera, *node_handle));
+        if model.cameras.get(node.camera).is_some() {
+            self.cameras.push((node.camera, node_handle));
         }
 
         // And all its children recursively
-        for child in node.children.iter() {
+        for &child in node.children.iter() {
             self.draw(model, child, &temp_transform);
         }
     }
@@ -220,7 +216,7 @@ impl Renderer {
         draw_shadow_program.bind();
 
         // Bind directional light as camera view
-        let light_node = model.nodes.get(&self.directional_light).unwrap();
+        let light_node = model.nodes.get(self.directional_light).unwrap();
         // Create orthographic camera but how big?
         let camera = Camera::orthographic(
             framebuffer.virtual_extent.width / 64,
@@ -392,10 +388,10 @@ impl Renderer {
                 framebuffer.virtual_extent.width as f32,
                 framebuffer.virtual_extent.height as f32,
             );
-            if let Some(light_node) = model.nodes.get(&self.directional_light) {
+            if let Some(light_node) = model.nodes.get(self.directional_light) {
                 let light = model
                     .directional_lights
-                    .get(&light_node.directional_light)
+                    .get(light_node.directional_light)
                     .unwrap();
                 shader.bind_sun(&light.color, light_node, &self.light_space);
             }
@@ -403,8 +399,8 @@ impl Renderer {
 
             // Draw the scene from all the points of view
             for (camera_handle, camera_node_handle) in self.cameras.iter() {
-                let camera = model.cameras.get(&camera_handle).unwrap();
-                let camera_node = model.nodes.get(&camera_node_handle).unwrap();
+                let camera = model.cameras.get(*camera_handle).unwrap();
+                let camera_node = model.nodes.get(*camera_node_handle).unwrap();
                 shader.bind_camera(camera, camera_node);
 
                 // Need to bind materials for a group of primitives that use the same one
@@ -438,7 +434,7 @@ impl Renderer {
                 .downcast_ref()
                 .unwrap();
             let (_, camera_node) = self.cameras[0];
-            let camera_node = model.nodes.get(&camera_node).unwrap();
+            let camera_node = model.nodes.get(camera_node).unwrap();
             self.sky.draw(sky_shader as _, camera_node);
         }
 

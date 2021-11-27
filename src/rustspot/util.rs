@@ -80,29 +80,29 @@ impl<T> Pack<T> {
         }
     }
 
-    fn get_vec_index(&self, handle: &Handle<T>) -> usize {
+    fn get_vec_index(&self, handle: Handle<T>) -> usize {
         assert!(handle.id < self.indices.len());
         let vec_index = self.indices[handle.id];
         assert!(vec_index < self.vec.len());
         vec_index
     }
 
-    pub fn get(&self, handle: &Handle<T>) -> Option<&T> {
+    pub fn get(&self, handle: Handle<T>) -> Option<&T> {
         if !handle.valid() {
             return None;
         }
         self.vec.get(self.get_vec_index(handle))
     }
 
-    pub fn get_mut(&mut self, handle: &Handle<T>) -> Option<&mut T> {
+    pub fn get_mut(&mut self, handle: Handle<T>) -> Option<&mut T> {
         if !handle.valid() {
             return None;
         }
-        let vec_index = self.get_vec_index(&handle);
+        let vec_index = self.get_vec_index(handle);
         self.vec.get_mut(vec_index)
     }
 
-    pub fn remove(&mut self, handle: &Handle<T>) {
+    pub fn remove(&mut self, handle: Handle<T>) {
         let vec_index = self.get_vec_index(handle);
         let last_vec_index = self.vec.len() - 1;
         self.vec.swap(vec_index, last_vec_index);
@@ -148,7 +148,7 @@ mod test {
         let mut pack = Pack::new();
         let thing = pack.push(Thing { val: 2 });
         assert_eq!(thing.get(&pack).unwrap().val, 2);
-        assert_eq!(pack.get(&thing).unwrap().val, 2);
+        assert_eq!(pack.get(thing).unwrap().val, 2);
     }
 
     #[test]
@@ -163,7 +163,7 @@ mod test {
 
         for i in 0..4u32 {
             assert_eq!(handles[i as usize].get(&pack).unwrap().val, i);
-            assert_eq!(pack.get(&handles[i as usize]).unwrap().val, i);
+            assert_eq!(pack.get(handles[i as usize]).unwrap().val, i);
         }
     }
 
@@ -173,12 +173,12 @@ mod test {
         let handle = pack.push(Thing { val: 0 });
         assert_eq!(handle.id, 0);
 
-        pack.remove(&handle);
+        pack.remove(handle);
         assert_eq!(pack.len(), 0);
 
         let handle = pack.push(Thing { val: 1 });
         assert_eq!(handle.id, 0);
-        assert_eq!(pack.get(&handle).unwrap().val, 1);
+        assert_eq!(pack.get(handle).unwrap().val, 1);
     }
 }
 

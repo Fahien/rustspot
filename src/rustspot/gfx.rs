@@ -170,7 +170,7 @@ impl Material {
     }
 
     pub fn bind(&self, textures: &Pack<Texture>) {
-        if let Some(texture) = textures.get(&self.texture) {
+        if let Some(texture) = textures.get(self.texture) {
             texture.bind();
         }
     }
