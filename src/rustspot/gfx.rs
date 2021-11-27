@@ -239,7 +239,7 @@ impl Ebo {
         unsafe { gl::BindBuffer(gl::ELEMENT_ARRAY_BUFFER, self.handle) };
     }
 
-    pub fn upload(&mut self, indices: &Vec<u32>) {
+    pub fn upload(&mut self, indices: &Vec<u16>) {
         self.bind();
         unsafe {
             gl::BufferData(

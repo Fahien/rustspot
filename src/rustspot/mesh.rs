@@ -20,7 +20,7 @@ impl MeshRes {
         Self { vbo, ebo, vao }
     }
 
-    pub fn from(vertices: &[Vertex], indices: &Vec<u32>) -> Self {
+    pub fn from(vertices: &[Vertex], indices: &Vec<u16>) -> Self {
         let mut res = MeshRes::new();
 
         res.vao.bind();
@@ -79,9 +79,10 @@ impl MeshRes {
 
 /// Geometry to be rendered with a given material
 pub struct Primitive {
-    _vertices: Vec<Vertex>,
-    pub indices: Vec<u32>,
-    pub material: Handle<Material>,
+    pub vertices: Vec<Vertex>,
+    pub indices: Vec<u16>,
+    /// None means default material
+    pub material: Option<Handle<Material>>,
 
     // Res could be computed on the fly, but we would need to hash both vertices and indices,
     // therefore we store it here and it is responsibility of the scene builder to avoid an
@@ -90,6 +91,18 @@ pub struct Primitive {
 }
 
 impl Primitive {
+    /// Creates a new primitive
+    pub fn new(vertices: Vec<Vertex>, indices: Vec<u16>) -> Self {
+        let res = MeshRes::from(&vertices, &indices);
+
+        Self {
+            vertices,
+            indices,
+            material: None,
+            res,
+        }
+    }
+
     /// Returns a new unit triangle primitive
     pub fn triangle(material: Handle<Material>) -> Self {
         let vertices = vec![
@@ -118,9 +131,9 @@ impl Primitive {
         let res = MeshRes::from(&vertices, &indices);
 
         Self {
-            _vertices: vertices,
+            vertices,
             indices,
-            material,
+            material: Some(material),
             res,
         }
     }
@@ -158,9 +171,9 @@ impl Primitive {
         let res = MeshRes::from(&vertices, &indices);
 
         Self {
-            _vertices: vertices,
+            vertices,
             indices,
-            material,
+            material: Some(material),
             res,
         }
     }
@@ -266,9 +279,9 @@ impl Primitive {
         let res = MeshRes::from(&vertices, &indices);
 
         Self {
-            _vertices: vertices,
+            vertices,
             indices,
-            material,
+            material: Some(material),
             res,
         }
     }

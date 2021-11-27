@@ -118,7 +118,7 @@ impl Renderer {
         if let Some(mesh) = model.meshes.get(mesh) {
             for &primitive_handle in mesh.primitives.iter() {
                 let primitive = model.primitives.get(primitive_handle).unwrap();
-                let material_handle = primitive.material;
+                let material_handle = primitive.material.unwrap();
                 let material = model.materials.get(material_handle).unwrap();
 
                 // Store this association shader program, material
@@ -412,7 +412,7 @@ impl Renderer {
 
                     for primitive_id in primitive_ids.iter() {
                         let primitive = &model.primitives[*primitive_id];
-                        assert!(primitive.material.valid());
+                        assert!(primitive.material.is_some());
 
                         // Bind the primitive, bind the nodes using that primitive, draw the primitive.
                         shader.bind_primitive(primitive);
