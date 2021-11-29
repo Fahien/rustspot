@@ -1,3 +1,4 @@
+use std::ffi::CStr;
 use std::fs::File;
 use std::path::Path;
 
@@ -446,18 +447,33 @@ pub struct Video {
     pub extent: Extent2D,
     system: sdl2::VideoSubsystem,
     window: sdl2::video::Window,
-    pub profile: sdl2::video::GLProfile,
-    gl: sdl2::video::GLContext,
+    pub gl: sdl2::video::GLContext,
 }
 
 impl Video {
+    fn get_context_profile() -> sdl2::video::GLProfile {
+        if cfg!(feature = "gles") {
+            sdl2::video::GLProfile::GLES
+        } else {
+            sdl2::video::GLProfile::Core
+        }
+    }
+
+    fn get_context_version() -> (u8, u8) {
+        if cfg!(feature = "gles") {
+            (3, 2)
+        } else {
+            (3, 3)
+        }
+    }
+
     fn new(sdl: &sdl2::Sdl, extent: Extent2D) -> Self {
         let system = sdl.video().expect("Failed initializing video");
 
         let attr = system.gl_attr();
-        let mut profile = sdl2::video::GLProfile::GLES;
-        attr.set_context_profile(profile);
-        attr.set_context_version(3, 2);
+        attr.set_context_profile(Self::get_context_profile());
+        let (major, minor) = Self::get_context_version();
+        attr.set_context_version(major, minor);
 
         attr.set_multisample_buffers(1);
         attr.set_multisample_samples(2);
@@ -465,23 +481,14 @@ impl Video {
         let window = match system
             .window("Test", extent.width, extent.height)
             .opengl()
+            .allow_highdpi()
             .position_centered()
             .resizable()
-            .allow_highdpi()
             .build()
         {
             Ok(w) => w,
             Err(_) => {
-                println!("Failed initializing GLES profile, trying Core");
-                profile = sdl2::video::GLProfile::Core;
-                attr.set_context_profile(profile);
-                attr.set_context_version(3, 3);
-                system
-                    .window("Test", extent.width, extent.height)
-                    .opengl()
-                    .position_centered()
-                    .build()
-                    .expect("Failed building window")
+                panic!("Failed initializing SDL window");
             }
         };
 
@@ -495,10 +502,22 @@ impl Video {
             extent,
             system,
             window,
-            profile,
             gl,
         }
     }
+}
+
+extern "system" fn debug_callback(
+    _source: gl::types::GLenum,
+    _type: gl::types::GLenum,
+    _id: gl::types::GLenum,
+    _severity: gl::types::GLenum,
+    _length: gl::types::GLsizei,
+    message: *const gl::types::GLchar,
+    _user_param: *mut libc::c_void,
+) {
+    let msg = unsafe { CStr::from_ptr(message as _) };
+    println!("{}", msg.to_str().unwrap());
 }
 
 pub struct Gfx {
@@ -513,8 +532,19 @@ pub struct Gfx {
 impl Gfx {
     pub fn new(sdl: &sdl2::Sdl, extent: Extent2D, offscreen_extent: Extent2D) -> Self {
         let video = Video::new(sdl, extent);
+
+        if !cfg!(target_os = "macos") {
+            unsafe {
+                gl::Enable(gl::DEBUG_OUTPUT);
+                gl::DebugMessageCallback(Some(debug_callback), std::ptr::null());
+            }
+        }
+
+        let gl_version = Self::get_gl_version();
+        println!("OpenGL v{}.{}", gl_version.0, gl_version.1);
+
         let mut gui = imgui::Context::create();
-        let renderer = Renderer::new(video.profile, &mut gui.fonts());
+        let renderer = Renderer::new(&mut gui.fonts());
         let frame = Some(Frame::new(extent, offscreen_extent));
 
         Self {
@@ -525,7 +555,7 @@ impl Gfx {
         }
     }
 
-    pub fn get_gl_version(&self) -> (i32, i32) {
+    pub fn get_gl_version() -> (i32, i32) {
         let (mut major, mut minor) = (0, 0);
         unsafe {
             gl::GetIntegerv(gl::MAJOR_VERSION, &mut major);

@@ -7,6 +7,9 @@ edition = "2018"
 [profile.dev.package."*"]
 opt-level = 3
 
+[features]
+gles = []
+
 [build-dependencies]
 glsl = "6.0"
 

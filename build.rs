@@ -101,13 +101,13 @@ fn generate_enum(shader_prefixes: &Vec<String>) -> Result<String, Box<dyn Error>
 
 fn generate_create_shaders(shader_prefixes: &Vec<String>) -> Result<String, Box<dyn Error>> {
     let mut code = String::from(
-        "pub fn create_shaders(profile: sdl2::video::GLProfile) -> Vec<Box<dyn CustomShader>> {\n    vec![\n",
+        "pub fn create_shaders() -> Vec<Box<dyn CustomShader>> {\n    vec![\n",
     );
 
     for shader_prefix in shader_prefixes {
         let shader_camel = to_camelcase(shader_prefix);
         code.push_str(&std::format!(
-            "        Box::new({}Shader::new(profile)),\n",
+            "        Box::new({}Shader::new()),\n",
             shader_camel
         ));
     }
@@ -190,7 +190,7 @@ impl {0}Loc {{
 }}
 
 impl {}Shader {{
-    pub fn new(profile: sdl2::video::GLProfile) -> Self {{
+    pub fn new() -> Self {{
         let vert_path = Path::new("{1}");
         let frag_path = Path::new("{2}");
 
@@ -206,9 +206,9 @@ impl {}Shader {{
             .read_to_end(&mut frag_src)
             .expect("Failed reading fragment file");
 
-        let vs = Shader::new(profile, gl::VERTEX_SHADER, &vert_src)
+        let vs = Shader::new(gl::VERTEX_SHADER, &vert_src)
             .expect("Failed to create shader from {1}");
-        let fs = Shader::new(profile, gl::FRAGMENT_SHADER, &frag_src)
+        let fs = Shader::new(gl::FRAGMENT_SHADER, &frag_src)
             .expect("Failed to create shader from {2}");
         let program = ShaderProgram::new(vs, fs);
         let loc = {0}Loc::new(&program);

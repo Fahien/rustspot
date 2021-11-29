@@ -8,16 +8,12 @@ pub struct Shader {
 }
 
 impl Shader {
-    pub fn new(
-        profile: sdl2::video::GLProfile,
-        shader_type: gl::types::GLenum,
-        src: &[u8],
-    ) -> Option<Shader> {
+    pub fn new(shader_type: gl::types::GLenum, src: &[u8]) -> Option<Shader> {
         unsafe {
-            let version = if profile == sdl2::video::GLProfile::Core {
-                "#version 330 core\n"
-            } else {
+            let version = if cfg!(feature = "gles") {
                 "#version 320 es\n"
+            } else {
+                "#version 330 core\n"
             };
 
             let handle = gl::CreateShader(shader_type);
@@ -141,27 +137,26 @@ impl ShaderProgram {
     }
 
     /// Returns a new shader program by loading vertex and fragment shaders files
-    pub fn open<P: AsRef<Path>>(
-        profile: sdl2::video::GLProfile,
-        vert: P,
-        frag: P,
-    ) -> ShaderProgram {
+    pub fn open<P: AsRef<Path>>(vert: P, frag: P) -> ShaderProgram {
         let mut vert_src = Vec::<u8>::new();
         let mut frag_src = Vec::<u8>::new();
 
+        let vert_str = vert.as_ref().to_string_lossy().to_string();
+        let frag_str = frag.as_ref().to_string_lossy().to_string();
+
         File::open(vert)
-            .expect("Failed to open vertex file")
+            .expect(&format!("Failed to open vertex file {}", vert_str))
             .read_to_end(&mut vert_src)
             .expect("Failed reading vertex file");
         File::open(frag)
-            .expect("Failed to open fragment file")
+            .expect(&format!("Failed to open fragment file {}", frag_str))
             .read_to_end(&mut frag_src)
             .expect("Failed reading fragment file");
 
-        let vert =
-            Shader::new(profile, gl::VERTEX_SHADER, &vert_src).expect("Failed creating shader");
-        let frag =
-            Shader::new(profile, gl::FRAGMENT_SHADER, &frag_src).expect("Failed creating shader");
+        let vert = Shader::new(gl::VERTEX_SHADER, &vert_src)
+            .expect(&format!("Failed creating shader {}", vert_str));
+        let frag = Shader::new(gl::FRAGMENT_SHADER, &frag_src)
+            .expect(&format!("Failed creating shader {}", frag_str));
 
         ShaderProgram::new(vert, frag)
     }

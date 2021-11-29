@@ -54,15 +54,13 @@ pub struct Renderer {
 }
 
 impl Renderer {
-    pub fn new(profile: sdl2::video::GLProfile, fonts: &mut imgui::FontAtlasRefMut) -> Renderer {
+    pub fn new(fonts: &mut imgui::FontAtlasRefMut) -> Renderer {
         let read_depth_program = ShaderProgram::open(
-            profile,
             "res/shader/unlit.vert.glsl",
             "res/shader/read-depth.frag.glsl",
         );
 
         let read_color_program = ShaderProgram::open(
-            profile,
             "res/shader/unlit.vert.glsl",
             "res/shader/read-color.frag.glsl",
         );
@@ -75,12 +73,12 @@ impl Renderer {
         let quad_primitive = Primitive::quad(Handle::none());
         let quad_node = Node::new();
 
-        let sky = Sky::new(profile);
+        let sky = Sky::new();
 
         Renderer {
             delta: 0.0,
-            gui_res: GuiRes::new(profile, fonts),
-            custom_shaders: create_shaders(profile),
+            gui_res: GuiRes::new(fonts),
+            custom_shaders: create_shaders(),
             shaders: HashMap::new(),
             directional_light: Handle::none(),
             point_lights: Vec::new(),

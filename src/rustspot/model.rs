@@ -15,6 +15,39 @@ use rayon::iter::{ParallelBridge, ParallelIterator};
 
 use super::*;
 
+fn data_type_as_size(data_type: gltf::accessor::DataType) -> usize {
+    match data_type {
+        gltf::accessor::DataType::I8 => 1,
+        gltf::accessor::DataType::U8 => 1,
+        gltf::accessor::DataType::I16 => 2,
+        gltf::accessor::DataType::U16 => 2,
+        gltf::accessor::DataType::U32 => 4,
+        gltf::accessor::DataType::F32 => 4,
+    }
+}
+
+fn dimensions_as_size(dimensions: gltf::accessor::Dimensions) -> usize {
+    match dimensions {
+        gltf::accessor::Dimensions::Scalar => 1,
+        gltf::accessor::Dimensions::Vec2 => 2,
+        gltf::accessor::Dimensions::Vec3 => 3,
+        gltf::accessor::Dimensions::Vec4 => 4,
+        gltf::accessor::Dimensions::Mat2 => 4,
+        gltf::accessor::Dimensions::Mat3 => 9,
+        gltf::accessor::Dimensions::Mat4 => 16,
+    }
+}
+
+fn get_stride(accessor: &gltf::Accessor) -> usize {
+    if let Some(view) = accessor.view() {
+        if let Some(stride) = view.stride() {
+            return stride;
+        }
+    }
+
+    data_type_as_size(accessor.data_type()) * dimensions_as_size(accessor.dimensions())
+}
+
 pub struct ModelBuilder {
     uri_buffers: Vec<Vec<u8>>,
     parent_dir: PathBuf,
@@ -49,6 +82,24 @@ impl ModelBuilder {
             }
         }
         Ok(())
+    }
+
+    fn get_data_start(&self, accessor: &gltf::Accessor) -> &[u8] {
+        let view = accessor.view().unwrap();
+        let view_len = view.length();
+
+        let buffer = view.buffer();
+        if let gltf::buffer::Source::Bin = buffer.source() {
+            unimplemented!()
+        }
+
+        let view_offset = view.offset();
+        let accessor_offset = accessor.offset();
+        let offset = accessor_offset + view_offset;
+        assert!(offset < buffer.length());
+
+        let data = &self.uri_buffers[buffer.index()];
+        &data[offset..offset + view_len]
     }
 
     pub fn load_materials(&mut self, model: &mut Model) {
@@ -186,15 +237,14 @@ impl ModelBuilder {
 
                 let mut indices = vec![];
                 if let Some(accessor) = gprimitive.indices() {
-                    assert!(accessor.data_type() == gltf::accessor::DataType::U16);
-                    let view = accessor.view().unwrap();
-                    let offset = accessor.offset() + view.offset();
-                    let data = &self.uri_buffers[view.buffer().index()];
-                    assert!(offset < data.len());
-                    let d = &data[offset];
-                    indices = unsafe {
-                        Vec::from_raw_parts(d as *const u8 as _, accessor.count(), accessor.count())
-                    };
+                    let data_type = accessor.data_type();
+                    assert!(data_type == gltf::accessor::DataType::U16);
+                    let data = self.get_data_start(&accessor);
+                    let d = &data[0];
+                    let length = accessor.count();
+                    let slice: &[u16] =
+                        unsafe { std::slice::from_raw_parts(d as *const u8 as _, length) };
+                    indices = Vec::from(slice);
                 }
 
                 let mut primitive = Primitive::new(vertices, indices);
@@ -224,23 +274,18 @@ impl ModelBuilder {
         assert!(dimensions == gltf::accessor::Dimensions::Vec3);
 
         let view = accessor.view().unwrap();
-        let buffer = view.buffer();
-        match buffer.source() {
-            gltf::buffer::Source::Bin => unimplemented!(),
-            _ => (),
-        };
 
         let target = view.target().unwrap_or(gltf::buffer::Target::ArrayBuffer);
         assert!(target == gltf::buffer::Target::ArrayBuffer);
 
-        let data = &self.uri_buffers[buffer.index()];
+        let data = self.get_data_start(accessor);
+        let stride = get_stride(accessor);
 
         for i in 0..count {
-            let offset = accessor.offset() + view.offset() + i * view.stride().unwrap_or_default();
+            let offset = i * stride;
             assert!(offset < data.len());
             let d = &data[offset];
             let position = unsafe { std::slice::from_raw_parts::<f32>(d as *const u8 as _, 3) };
-            println!("Read position {:?}", position);
 
             if vertices.len() <= i {
                 vertices.push(Vertex::new())
@@ -263,23 +308,17 @@ impl ModelBuilder {
         assert!(dimensions == gltf::accessor::Dimensions::Vec3);
 
         let view = accessor.view().unwrap();
-        let buffer = view.buffer();
-        match buffer.source() {
-            gltf::buffer::Source::Bin => unimplemented!(),
-            _ => (),
-        };
-
         let target = view.target().unwrap_or(gltf::buffer::Target::ArrayBuffer);
         assert!(target == gltf::buffer::Target::ArrayBuffer);
 
-        let data = &self.uri_buffers[buffer.index()];
+        let data = self.get_data_start(accessor);
+        let stride = get_stride(accessor);
 
         for i in 0..count {
-            let offset = accessor.offset() + view.offset() + i * view.stride().unwrap_or_default();
+            let offset = i * stride;
             assert!(offset < data.len());
             let d = &data[offset];
             let normal = unsafe { std::slice::from_raw_parts::<f32>(d as *const u8 as _, 3) };
-            println!("Read normal {:?}", normal);
 
             if vertices.len() <= i {
                 vertices.push(Vertex::new())
@@ -302,23 +341,17 @@ impl ModelBuilder {
         assert!(dimensions == gltf::accessor::Dimensions::Vec2);
 
         let view = accessor.view().unwrap();
-        let buffer = view.buffer();
-        match buffer.source() {
-            gltf::buffer::Source::Bin => unimplemented!(),
-            _ => (),
-        };
-
         let target = view.target().unwrap_or(gltf::buffer::Target::ArrayBuffer);
         assert!(target == gltf::buffer::Target::ArrayBuffer);
 
-        let data = &self.uri_buffers[buffer.index()];
+        let data = self.get_data_start(accessor);
+        let stride = get_stride(accessor);
 
         for i in 0..count {
-            let offset = accessor.offset() + view.offset() + i * view.stride().unwrap_or_default();
+            let offset = i * stride;
             assert!(offset < data.len());
             let d = &data[offset];
             let tex_coords = unsafe { std::slice::from_raw_parts::<f32>(d as *const u8 as _, 2) };
-            println!("Read tex_coords {:?}", tex_coords);
 
             if vertices.len() <= i {
                 vertices.push(Vertex::new())

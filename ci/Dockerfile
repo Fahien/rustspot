@@ -19,13 +19,13 @@ RUN cargo init
 COPY ci/cargo.sh ci/cargo.sh
 COPY Cargo.toml Cargo.toml
 RUN bash ci/cargo.sh && cat Cargo.toml
-RUN cargo build --release
+RUN cargo build --release --features "gles"
 
 # Build whole project
 COPY Cargo.toml Cargo.toml
 COPY src src
 
-RUN cargo build --release
+RUN cargo build --release --features "gles"
 
 # Allows running cp in docker run
 ENTRYPOINT ["/bin/bash", "-l", "-c"]

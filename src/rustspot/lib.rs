@@ -115,8 +115,6 @@ impl Spot {
         let events = sdl.event_pump().expect("Failed to initialize SDL2 events");
 
         let gfx = Gfx::new(&sdl, extent, offscreen_extent);
-        let gl_version = gfx.get_gl_version();
-        println!("OpenGL v{}.{}", gl_version.0, gl_version.1);
 
         let timer = Timer::new();
 

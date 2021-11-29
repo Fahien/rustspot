@@ -7,7 +7,7 @@ pub struct GuiRes {
 }
 
 impl GuiRes {
-    pub fn new(profile: sdl2::video::GLProfile, fonts: &mut imgui::FontAtlasRefMut) -> Self {
+    pub fn new(fonts: &mut imgui::FontAtlasRefMut) -> Self {
         // Font
         let mut font_texture = Texture::new();
         let texture = fonts.build_rgba32_texture();
@@ -50,9 +50,9 @@ impl GuiRes {
         }
         "#;
 
-        let vert = Shader::new(profile, gl::VERTEX_SHADER, vert_source.as_bytes())
+        let vert = Shader::new(gl::VERTEX_SHADER, vert_source.as_bytes())
             .expect("Failed to create imgui vertex shader");
-        let frag = Shader::new(profile, gl::FRAGMENT_SHADER, frag_source.as_bytes())
+        let frag = Shader::new(gl::FRAGMENT_SHADER, frag_source.as_bytes())
             .expect("Failed to create imgui fragment shader");
 
         let program = ShaderProgram::new(vert, frag);

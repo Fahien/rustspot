@@ -9,11 +9,11 @@ use nalgebra as na;
 use rustspot::*;
 
 fn main() -> Result<(), Box<dyn Error>> {
-    let mut spot = Spot::builder().width(480*2).height(320*2).build();
+    let mut spot = Spot::builder().width(480 * 2).height(320 * 2).build();
     let extent = spot.gfx.video.extent;
 
     // Load gltf
-    let mut model = Model::builder("res/model/duck/duck.gltf")?.build()?;
+    let mut model = Model::builder("res/model/truck/truck.gltf")?.build()?;
     create_light(&mut model);
     let camera = create_camera(&mut model);
 

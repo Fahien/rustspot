@@ -49,7 +49,7 @@ pub struct Sky {
 }
 
 impl Sky {
-    pub fn new(profile: sdl2::video::GLProfile) -> Sky {
+    pub fn new() -> Sky {
         let colors = vec![SkyColor::new(
             [254.0 / 255.0, 254.0 / 255.0, 202.0 / 255.0],
             [98.0 / 255.0, 203.0 / 255.0, 251.0 / 255.0],
