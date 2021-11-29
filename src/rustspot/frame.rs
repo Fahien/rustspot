@@ -87,13 +87,29 @@ impl Framebuffer {
     }
 
     fn set_attachment(&mut self, attachment_type: gl::types::GLenum, texture: &Option<&Texture>) {
-        let handle = match texture {
-            Some(texture) => texture.handle,
-            None => gl::NONE,
-        };
-
-        unsafe {
-            gl::FramebufferTexture2D(gl::FRAMEBUFFER, attachment_type, gl::TEXTURE_2D, handle, 0)
+        match texture {
+            Some(texture) => {
+                texture.bind();
+                unsafe {
+                    gl::FramebufferTexture2D(
+                        gl::FRAMEBUFFER,
+                        attachment_type,
+                        texture.target,
+                        texture.handle,
+                        0,
+                    );
+                }
+                texture.unbind();
+            }
+            None => unsafe {
+                gl::FramebufferTexture2D(
+                    gl::FRAMEBUFFER,
+                    attachment_type,
+                    gl::TEXTURE_2D,
+                    gl::NONE,
+                    0,
+                );
+            },
         };
     }
 
@@ -109,6 +125,18 @@ impl Framebuffer {
     fn is_complete(&self) -> bool {
         let status = unsafe { gl::CheckFramebufferStatus(gl::FRAMEBUFFER) };
         status == gl::FRAMEBUFFER_COMPLETE
+    }
+
+    pub fn bind_read(&self) {
+        unsafe {
+            gl::BindFramebuffer(gl::READ_FRAMEBUFFER, self.handle);
+        }
+    }
+
+    pub fn bind_draw(&self) {
+        unsafe {
+            gl::BindFramebuffer(gl::DRAW_FRAMEBUFFER, self.handle);
+        }
     }
 
     pub fn bind(&self) {
@@ -169,8 +197,8 @@ pub struct CustomFramebuffer {
 
 impl CustomFramebuffer {
     fn geometry(extent: Extent2D) -> Self {
-        let color_texture = Texture::color(extent);
-        let depth_texture = Texture::depth(extent);
+        let color_texture = Texture::color(extent, 4);
+        let depth_texture = Texture::depth(extent, 4);
         let framebuffer = Framebuffer::builder()
             .extent(extent)
             .color_attachment(&color_texture)
@@ -186,7 +214,7 @@ impl CustomFramebuffer {
 
     pub fn shadow() -> Self {
         let extent = Extent2D::new(512, 512);
-        let depth_texture = Texture::depth(extent);
+        let depth_texture = Texture::depth(extent, 1);
         let framebuffer = Framebuffer::builder()
             .extent(extent)
             .depth_attachment(&depth_texture)

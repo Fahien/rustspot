@@ -9,9 +9,12 @@ pub struct GuiRes {
 impl GuiRes {
     pub fn new(fonts: &mut imgui::FontAtlasRefMut) -> Self {
         // Font
-        let mut font_texture = Texture::new();
         let texture = fonts.build_rgba32_texture();
-        font_texture.upload(gl::RGBA, texture.width, texture.height, texture.data);
+        let font_texture = Texture::builder()
+            .extent(Extent2D::new(texture.width, texture.height))
+            .data(texture.data)
+            .build()
+            .unwrap();
         fonts.tex_id = (font_texture.handle as usize).into();
 
         // Shaders

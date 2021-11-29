@@ -4,7 +4,6 @@
 
 use crate::*;
 use nalgebra as na;
-use sdl2::video::GLProfile;
 
 pub struct Grass {
     pub camera: Handle<Node>,
@@ -66,5 +65,4 @@ impl Grass {
             model,
         }
     }
-
 }

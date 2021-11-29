@@ -13,7 +13,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     let extent = spot.gfx.video.extent;
 
     // Load gltf
-    let mut model = Model::builder("res/model/truck/truck.gltf")?.build()?;
+    let mut model = Model::builder("res/model/duck/duck.gltf")?.build()?;
     create_light(&mut model);
     let camera = create_camera(&mut model);
 

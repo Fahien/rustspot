@@ -264,15 +264,17 @@ impl Renderer {
         // Bind depth read shader
         self.read_depth_program.enable();
 
-        // Bind extent
-        if self.read_depth_program.loc.extent >= 0 {
-            unsafe {
-                gl::Uniform2f(
-                    self.read_depth_program.loc.extent,
-                    depth_texture.extent.width as f32,
-                    depth_texture.extent.height as f32,
-                );
-            }
+        // Bind extent and samples
+        unsafe {
+            gl::Uniform2f(
+                self.read_depth_program.loc.extent,
+                depth_texture.extent.width as f32,
+                depth_texture.extent.height as f32,
+            );
+            gl::Uniform1i(
+                self.read_depth_program.loc.tex_samples,
+                depth_texture.samples as i32,
+            );
         }
 
         // Bind camera
@@ -295,52 +297,75 @@ impl Renderer {
 
     /// Renders colors from offscreen framebuffer to the screen
     pub fn blit_color<D: DrawableOnto>(&mut self, source: &CustomFramebuffer, target: &D) {
-        let color_texture = &source.color_textures[0];
-
+        let source_buffer = source.get_framebuffer();
         let framebuffer = target.get_framebuffer();
-        framebuffer.bind();
 
-        unsafe {
-            gl::Viewport(
-                0,
-                0,
-                framebuffer.extent.width as _,
-                framebuffer.extent.height as _,
-            );
-            gl::ClearColor(0.0, 0.0, 0.0, 0.0);
-            gl::Clear(gl::COLOR_BUFFER_BIT | gl::DEPTH_BUFFER_BIT);
-        }
+        if source_buffer.extent == framebuffer.extent {
+            source_buffer.bind_read();
+            framebuffer.bind_draw();
+            unsafe {
+                // This can be done only when source and destination extent are equal
+                gl::BlitFramebuffer(
+                    0,
+                    0,
+                    source_buffer.extent.width as _,
+                    source_buffer.extent.height as _,
+                    0,
+                    0,
+                    framebuffer.extent.width as _,
+                    framebuffer.extent.height as _,
+                    gl::COLOR_BUFFER_BIT,
+                    gl::NEAREST,
+                );
+            }
+        } else {
+            framebuffer.bind();
 
-        // Bind color read shader
-        self.read_color_program.enable();
+            unsafe {
+                gl::Viewport(
+                    0,
+                    0,
+                    framebuffer.extent.width as _,
+                    framebuffer.extent.height as _,
+                );
+                gl::ClearColor(0.0, 0.0, 0.0, 0.0);
+                gl::Clear(gl::COLOR_BUFFER_BIT | gl::DEPTH_BUFFER_BIT);
+            }
 
-        // Bind extent
-        if self.read_color_program.loc.extent >= 0 {
+            // Bind color read shader
+            self.read_color_program.enable();
+
+            // Bind extent
+            let color_texture = &source.color_textures[0];
             unsafe {
                 gl::Uniform2f(
                     self.read_color_program.loc.extent,
                     color_texture.extent.width as f32,
                     color_texture.extent.height as f32,
                 );
+                gl::Uniform1i(
+                    self.read_color_program.loc.tex_samples,
+                    color_texture.samples as _,
+                );
             }
+
+            // Bind camera
+            self.screen_camera
+                .bind(&self.read_color_program, &self.screen_node);
+
+            // Bind texture
+            color_texture.bind();
+
+            // Bind quad
+            self.quad_primitive.bind();
+
+            // Bind node
+            self.quad_node
+                .bind(&self.read_color_program, &na::Matrix4::identity());
+
+            // Draw
+            self.quad_primitive.draw();
         }
-
-        // Bind camera
-        self.screen_camera
-            .bind(&self.read_color_program, &self.screen_node);
-
-        // Bind texture
-        color_texture.bind();
-
-        // Bind quad
-        self.quad_primitive.bind();
-
-        // Bind node
-        self.quad_node
-            .bind(&self.read_color_program, &na::Matrix4::identity());
-
-        // Draw
-        self.quad_primitive.draw();
     }
 
     /// This should be called after drawing everything to trigger the actual GL rendering.
@@ -355,7 +380,7 @@ impl Renderer {
         //       foreach node in prim.nodes:
         //         bind(node) -> draw(prim)
         let framebuffer = target.get_framebuffer();
-        framebuffer.bind();
+        framebuffer.bind_draw();
 
         unsafe {
             gl::Viewport(

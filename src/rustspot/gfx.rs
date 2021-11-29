@@ -106,12 +106,12 @@ impl Ebo {
         unsafe { gl::BindBuffer(gl::ELEMENT_ARRAY_BUFFER, self.handle) };
     }
 
-    pub fn upload(&mut self, indices: &Vec<u16>) {
+    pub fn upload<T>(&mut self, indices: &Vec<T>) {
         self.bind();
         unsafe {
             gl::BufferData(
                 gl::ELEMENT_ARRAY_BUFFER,
-                (indices.len() * std::mem::size_of::<u32>()) as isize,
+                (indices.len() * std::mem::size_of::<T>()) as isize,
                 indices.as_ptr() as *const libc::c_void,
                 gl::STATIC_DRAW,
             )
@@ -324,8 +324,9 @@ impl Video {
         let (major, minor) = Self::get_context_version();
         attr.set_context_version(major, minor);
 
-        attr.set_multisample_buffers(1);
-        attr.set_multisample_samples(2);
+        // We need these only if rendering directly onto default framebuffer
+        // attr.set_multisample_buffers(1);
+        // attr.set_multisample_samples(2);
 
         let window = match system
             .window("Test", extent.width, extent.height)
@@ -346,6 +347,8 @@ impl Video {
             .expect("Failed creating GL context");
 
         gl::load_with(|symbol| system.gl_get_proc_address(symbol) as *const _);
+
+        unsafe { gl::Enable(gl::MULTISAMPLE) };
 
         Self {
             extent,
@@ -375,6 +378,7 @@ pub struct Gfx {
     frame: Option<Frame>,
     pub renderer: Renderer,
     pub gui: imgui::Context,
+
     pub video: Video,
 }
 

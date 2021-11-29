@@ -3,7 +3,6 @@
 // SPDX-License-Identifier: MIT
 
 use crate::*;
-use nalgebra as na;
 
 pub struct MeshRes {
     pub vbo: Vbo,

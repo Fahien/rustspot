@@ -102,7 +102,7 @@ impl ModelBuilder {
         &data[offset..offset + view_len]
     }
 
-    pub fn load_materials(&mut self, model: &mut Model) {
+    pub fn load_materials(&mut self, model: &mut Model) -> Result<(), Box<dyn Error>> {
         for gmaterial in self.gltf.materials() {
             let mut material = Material::builder().build();
 
@@ -113,12 +113,11 @@ impl ModelBuilder {
                         let uri = self.parent_dir.join(uri);
                         let texture_handle = if let Some((index, _)) =
                             model.textures.iter().enumerate().find(|(_, texture)| {
-                                texture.path.is_some()
-                                    && texture.path.as_ref().unwrap() == uri.to_str().unwrap()
+                                texture.path.is_some() && *texture.path.as_ref().unwrap() == uri
                             }) {
                             Handle::new(index)
                         } else {
-                            let texture = Texture::open(uri);
+                            let texture = Texture::builder().path(uri).build()?;
                             model.textures.push(texture)
                         };
                         material.texture = Some(texture_handle);
@@ -135,13 +134,15 @@ impl ModelBuilder {
                 );
                 material.color = color;
                 if !model.colors.contains_key(&color) {
-                    let texture = Texture::pixel(color);
+                    let texture = Texture::builder().data(color.as_slice()).build()?;
                     model.colors.insert(color, texture);
                 }
             }
 
             model.materials.push(material);
         }
+
+        Ok(())
     }
 
     pub fn build(&mut self) -> Result<Model, Box<dyn Error>> {

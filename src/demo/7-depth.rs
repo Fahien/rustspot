@@ -63,7 +63,9 @@ fn main() {
 fn create_model() -> (Model, Handle<Node>) {
     let mut model = Model::new();
 
-    let texture = model.textures.push(Texture::open("res/img/lena.png"));
+    let texture = model
+        .textures
+        .push(Texture::builder().path("res/img/lena.png").build().unwrap());
 
     // Create a material with the previous texture
     let material = model
