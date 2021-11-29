@@ -56,6 +56,16 @@ impl Color {
     }
 }
 
+fn to_gl_format(color_type: png::ColorType) -> gl::types::GLenum {
+    match color_type {
+        png::ColorType::Grayscale => todo!(),
+        png::ColorType::RGB => gl::RGB,
+        png::ColorType::Indexed => todo!(),
+        png::ColorType::GrayscaleAlpha => todo!(),
+        png::ColorType::RGBA => gl::RGBA,
+    }
+}
+
 pub struct Texture {
     pub handle: u32,
     pub extent: Extent2D,
@@ -128,7 +138,7 @@ impl Texture {
     /// Creates a one pixel texture with the RGBA color passed as argument
     pub fn pixel(data: Color) -> Self {
         let mut texture = Self::new();
-        texture.upload(1, 1, data.as_slice());
+        texture.upload(gl::RGBA, 1, 1, data.as_slice());
         texture
     }
 
@@ -145,7 +155,12 @@ impl Texture {
 
         let mut texture = Texture::new();
         texture.path = Some(str_path);
-        texture.upload(info.width, info.height, &data);
+        texture.upload(
+            to_gl_format(info.color_type),
+            info.width,
+            info.height,
+            &data,
+        );
         texture
     }
 
@@ -153,7 +168,7 @@ impl Texture {
         unsafe { gl::BindTexture(gl::TEXTURE_2D, self.handle) };
     }
 
-    pub fn upload<T>(&mut self, width: u32, height: u32, data: &[T]) {
+    pub fn upload<T>(&mut self, format: gl::types::GLenum, width: u32, height: u32, data: &[T]) {
         self.extent.width = width;
         self.extent.height = height;
 
@@ -163,11 +178,11 @@ impl Texture {
             gl::TexImage2D(
                 gl::TEXTURE_2D,
                 0,
-                gl::RGBA as i32,
+                format as i32,
                 width as i32,
                 height as i32,
                 0,
-                gl::RGBA,
+                format,
                 gl::UNSIGNED_BYTE,
                 &data[0] as *const T as _,
             );

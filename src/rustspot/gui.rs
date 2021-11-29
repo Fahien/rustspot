@@ -11,7 +11,7 @@ impl GuiRes {
         // Font
         let mut font_texture = Texture::new();
         let texture = fonts.build_rgba32_texture();
-        font_texture.upload(texture.width, texture.height, texture.data);
+        font_texture.upload(gl::RGBA, texture.width, texture.height, texture.data);
         fonts.tex_id = (font_texture.handle as usize).into();
 
         // Shaders
