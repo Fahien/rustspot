@@ -24,6 +24,9 @@ pub use terrain::*;
 pub mod renderer;
 pub use renderer::*;
 
+pub mod texture;
+pub use texture::*;
+
 pub mod material;
 pub use material::*;
 
