@@ -9,17 +9,32 @@ use nalgebra as na;
 use rustspot::*;
 
 fn main() -> Result<(), Box<dyn Error>> {
-    let mut spot = Spot::builder().width(480 * 2).height(320 * 2).build();
-    let extent = spot.gfx.video.extent;
+    let extent = Extent2D::new(480 * 2, 320 * 2);
+    let mut spot = Spot::builder()
+        .width(extent.width)
+        .height(extent.height)
+        .offscreen_width(extent.width)
+        .offscreen_height(extent.height)
+        .build();
+
+    spot.gfx.renderer.sky.enabled = true;
 
     // Load gltf
     let mut model = Model::builder("res/model/duck/duck.gltf")?.build()?;
+    let mut terrain = Terrain::new(&mut model);
+    terrain.set_scale(&mut model, 64.0);
     create_light(&mut model);
     let camera = create_camera(&mut model);
 
     let root = Handle::new(0);
 
     model.nodes.get_mut(root).unwrap().children.push(camera);
+    model
+        .nodes
+        .get_mut(root)
+        .unwrap()
+        .children
+        .push(terrain.root);
 
     'gameloop: loop {
         // Handle SDL2 events
@@ -60,7 +75,19 @@ fn main() -> Result<(), Box<dyn Error>> {
 
         spot.gfx
             .renderer
-            .render_geometry(&model, &frame.default_framebuffer);
+            .render_shadow(&model, &frame.shadow_buffer);
+
+        spot.gfx
+            .renderer
+            .draw(&model, root, &na::Matrix4::identity());
+
+        spot.gfx
+            .renderer
+            .render_geometry(&model, &frame.geometry_buffer);
+
+        spot.gfx
+            .renderer
+            .blit_color(&frame.geometry_buffer, &frame.default_framebuffer);
 
         // Render GUI
         let ui = spot.gfx.gui.frame();
@@ -107,7 +134,7 @@ fn create_light(model: &mut Model) {
     light_node.trs.translate(2.0, 0.0, 8.0);
     light_node.trs.rotate(&na::UnitQuaternion::from_axis_angle(
         &na::Vector3::x_axis(),
-        -std::f32::consts::FRAC_PI_8,
+        -std::f32::consts::FRAC_PI_4,
     ));
 
     let light_node = model.nodes.push(light_node);
@@ -126,10 +153,6 @@ fn create_camera(model: &mut Model) -> Handle<Node> {
         .name("Camera".to_string())
         .camera(camera)
         .build();
-    camera_node.trs.rotate(&na::UnitQuaternion::from_axis_angle(
-        &na::Vector3::x_axis(),
-        -std::f32::consts::FRAC_PI_4,
-    ));
-    camera_node.trs.translate(0.5, 3.0, 2.0);
+    camera_node.trs.translate(0.0, 1.0, 2.0);
     model.nodes.push(camera_node)
 }

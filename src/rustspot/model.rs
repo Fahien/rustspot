@@ -104,7 +104,7 @@ impl ModelBuilder {
 
     pub fn load_materials(&mut self, model: &mut Model) -> Result<(), Box<dyn Error>> {
         for gmaterial in self.gltf.materials() {
-            let mut material = Material::builder().build();
+            let mut material = Material::builder().shader(Shaders::LIGHTSHADOW).build();
 
             let pbr = gmaterial.pbr_metallic_roughness();
             if let Some(gtexture) = pbr.base_color_texture() {
