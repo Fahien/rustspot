@@ -100,9 +100,8 @@ fn generate_enum(shader_prefixes: &Vec<String>) -> Result<String, Box<dyn Error>
 }
 
 fn generate_create_shaders(shader_prefixes: &Vec<String>) -> Result<String, Box<dyn Error>> {
-    let mut code = String::from(
-        "pub fn create_shaders() -> Vec<Box<dyn CustomShader>> {\n    vec![\n",
-    );
+    let mut code =
+        String::from("pub fn create_shaders() -> Vec<Box<dyn CustomShader>> {\n    vec![\n");
 
     for shader_prefix in shader_prefixes {
         let shader_camel = to_camelcase(shader_prefix);
@@ -240,6 +239,9 @@ impl CustomShader for {}Shader {{
     // Associate texture units and samplers
     if uniform_strings.contains("tex_sampler") {
         generated_code.push_str("        unsafe { gl::Uniform1i(self.loc.tex_sampler, 0) };\n");
+    }
+    if uniform_strings.contains("normal_sampler") {
+        generated_code.push_str("        unsafe { gl::Uniform1i(self.loc.normal_sampler, 2) };\n");
     }
 
     generated_code.push_str("    }\n");

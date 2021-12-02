@@ -107,6 +107,8 @@ impl ModelBuilder {
             let mut material = Material::builder().shader(Shaders::LIGHTSHADOW).build();
 
             let pbr = gmaterial.pbr_metallic_roughness();
+
+            // Load albedo
             if let Some(gtexture) = pbr.base_color_texture() {
                 match gtexture.texture().source().source() {
                     gltf::image::Source::Uri { uri, .. } => {
@@ -136,6 +138,26 @@ impl ModelBuilder {
                 if !model.colors.contains_key(&color) {
                     let texture = Texture::builder().data(color.as_slice()).build()?;
                     model.colors.insert(color, texture);
+                }
+            }
+
+            // Load normal map
+            if let Some(gtexture) = gmaterial.normal_texture() {
+                match gtexture.texture().source().source() {
+                    gltf::image::Source::Uri { uri, .. } => {
+                        let uri = self.parent_dir.join(uri);
+                        let texture_handle = if let Some((index, _)) =
+                            model.textures.iter().enumerate().find(|(_, texture)| {
+                                texture.path.is_some() && *texture.path.as_ref().unwrap() == uri
+                            }) {
+                            Handle::new(index)
+                        } else {
+                            let texture = Texture::builder().path(uri).build()?;
+                            model.textures.push(texture)
+                        };
+                        material.normals = Some(texture_handle);
+                    }
+                    _ => unimplemented!(),
                 }
             }
 
