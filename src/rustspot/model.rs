@@ -70,6 +70,8 @@ impl ModelBuilder {
     }
 
     fn load_uri_buffers(&mut self) -> Result<(), Box<dyn Error>> {
+        let mut timer = Timer::new();
+
         for buffer in self.gltf.buffers() {
             match buffer.source() {
                 gltf::buffer::Source::Uri(uri) => {
@@ -81,6 +83,8 @@ impl ModelBuilder {
                 _ => unimplemented!(),
             }
         }
+
+        println!("Buffers loaded ({}s)", timer.get_delta().as_secs_f32());
         Ok(())
     }
 
@@ -102,7 +106,50 @@ impl ModelBuilder {
         &data[offset..offset + view_len]
     }
 
+    pub fn load_textures(&mut self, model: &mut Model) {
+        let mut timer = Timer::new();
+
+        // Let us load textures first
+        let texture_builders: Vec<TextureBuilder> = self
+            .gltf
+            .images()
+            .enumerate()
+            .par_bridge()
+            .map(|(i, image)| {
+                match image.source() {
+                    gltf::image::Source::View { .. } => todo!(),
+                    gltf::image::Source::Uri { uri, .. } => {
+                        // Join gltf parent dir to URI
+                        let path = self.parent_dir.join(uri);
+                        Texture::builder().id(i as u32).path(path)
+                    }
+                }
+            })
+            .collect();
+
+        println!(
+            "Loaded images from file ({}s)",
+            timer.get_delta().as_secs_f32()
+        );
+
+        // This can not be done in parallel as OpenGL is not multithread-friendly
+        let mut textures: Vec<Texture> = texture_builders
+            .into_iter()
+            .map(|builder| builder.build().unwrap())
+            .collect();
+
+        textures.sort_by_key(|tex| tex.id);
+        model.textures = Pack::from(textures);
+
+        println!(
+            "Loaded images to GPU ({}s)",
+            timer.get_delta().as_secs_f32()
+        );
+    }
+
     pub fn load_materials(&mut self, model: &mut Model) -> Result<(), Box<dyn Error>> {
+        let _ = ScopedTimer::new("Materials loaded");
+
         for gmaterial in self.gltf.materials() {
             let mut material = Material::builder().shader(Shaders::LIGHTSHADOW).build();
 
@@ -112,16 +159,20 @@ impl ModelBuilder {
             if let Some(gtexture) = pbr.base_color_texture() {
                 match gtexture.texture().source().source() {
                     gltf::image::Source::Uri { uri, .. } => {
-                        let uri = self.parent_dir.join(uri);
-                        let texture_handle = if let Some((index, _)) =
-                            model.textures.iter().enumerate().find(|(_, texture)| {
-                                texture.path.is_some() && *texture.path.as_ref().unwrap() == uri
-                            }) {
-                            Handle::new(index)
-                        } else {
-                            let texture = Texture::builder().path(uri).build()?;
-                            model.textures.push(texture)
-                        };
+                        let path = self.parent_dir.join(uri);
+
+                        // Find texture by path
+                        let (texture_id, _) = model
+                            .textures
+                            .iter()
+                            .enumerate()
+                            .find(|(_, texture)| {
+                                texture.path.is_some() && *texture.path.as_ref().unwrap() == path
+                            })
+                            .expect(&format!("Failed to find {}", uri));
+
+                        let texture_handle = Handle::new(texture_id);
+
                         material.texture = Some(texture_handle);
                     }
                     _ => unimplemented!(),
@@ -146,15 +197,19 @@ impl ModelBuilder {
                 match gtexture.texture().source().source() {
                     gltf::image::Source::Uri { uri, .. } => {
                         let uri = self.parent_dir.join(uri);
-                        let texture_handle = if let Some((index, _)) =
-                            model.textures.iter().enumerate().find(|(_, texture)| {
+
+                        // Find texture by path
+                        let (texture_id, _) = model
+                            .textures
+                            .iter()
+                            .enumerate()
+                            .find(|(_, texture)| {
                                 texture.path.is_some() && *texture.path.as_ref().unwrap() == uri
-                            }) {
-                            Handle::new(index)
-                        } else {
-                            let texture = Texture::builder().path(uri).build()?;
-                            model.textures.push(texture)
-                        };
+                            })
+                            .unwrap();
+
+                        let texture_handle = Handle::new(texture_id);
+
                         material.normals = Some(texture_handle);
                     }
                     _ => unimplemented!(),
@@ -171,7 +226,8 @@ impl ModelBuilder {
         let mut model = Model::new();
 
         self.load_uri_buffers()?;
-        self.load_materials(&mut model);
+        self.load_textures(&mut model);
+        self.load_materials(&mut model)?;
         self.load_meshes(&mut model)?;
 
         // Load scene

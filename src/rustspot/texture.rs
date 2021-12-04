@@ -30,39 +30,58 @@ fn to_gl_renderable_format(format: gl::types::GLenum) -> gl::types::GLenum {
 }
 
 pub struct TextureBuilder<'a> {
+    id: u32,
     format: gl::types::GLenum,
     extent: Extent2D,
     component: gl::types::GLenum,
     samples: u32,
 
     data: Option<&'a [u8]>,
+
+    // Data loaded from file
+    owned_data: Option<Vec<u8>>,
     path: Option<PathBuf>,
 }
 
 fn load_data<P: AsRef<Path>>(
     path: P,
 ) -> Result<(Extent2D, gl::types::GLenum, Vec<u8>), Box<dyn Error>> {
-    let decoder = png::Decoder::new(File::open(path)?);
+    let decoder = png::Decoder::new(File::open(&path)?);
     let (info, mut reader) = decoder.read_info()?;
 
     let mut data: Vec<u8> = vec![0; info.buffer_size()];
+    let mut timer = Timer::new();
     reader.next_frame(data.as_mut_slice())?;
 
     let extent = Extent2D::new(info.width, info.height);
     let format = to_gl_format(info.color_type);
+
+    println!(
+        "Image {} ({:?}) leaded in {}",
+        path.as_ref().to_string_lossy(),
+        info.color_type,
+        timer.get_delta().as_secs_f32()
+    );
     Ok((extent, format, data))
 }
 
 impl<'a> TextureBuilder<'a> {
     pub fn new() -> Self {
         Self {
+            id: 0,
             format: gl::RGBA,
             extent: Extent2D::new(1, 1),
             component: gl::UNSIGNED_BYTE,
             samples: 1,
             data: None,
+            owned_data: None,
             path: None,
         }
+    }
+
+    pub fn id(mut self, id: u32) -> Self {
+        self.id = id;
+        self
     }
 
     pub fn format(mut self, format: gl::types::GLenum) -> Self {
@@ -91,23 +110,31 @@ impl<'a> TextureBuilder<'a> {
         self
     }
 
+    // As soon as this method is called, data from path is loaded in main memory
     pub fn path<P: AsRef<Path>>(mut self, path: P) -> Self {
+        let (extent, format, data) = load_data(&path).expect(&format!(
+            "Failed to load image from {}",
+            path.as_ref().to_string_lossy()
+        ));
+        self.owned_data = Some(data);
+        self.extent = extent;
+        self.format = format;
         self.path = Some(path.as_ref().into());
+
         self
     }
 
     pub fn build(self) -> Result<Texture, Box<dyn Error>> {
         let mut ret = Texture::new(self.format, self.extent, self.component, self.samples);
+        ret.id = self.id;
 
         ret.bind();
 
         if self.data.is_some() {
             ret.upload(self.data);
-        } else if let Some(path) = self.path {
-            let (extent, format, data) = load_data(&path)?;
-            ret.extent = extent;
-            ret.format = format;
-            ret.upload(Some(&data));
+        } else if self.owned_data.is_some() {
+            ret.path = self.path;
+            ret.upload(Some(self.owned_data.as_ref().unwrap()));
         } else {
             ret.attachment();
         }
@@ -120,6 +147,7 @@ impl<'a> TextureBuilder<'a> {
 
 pub struct Texture {
     pub handle: u32,
+    pub id: u32,
     pub target: gl::types::GLenum,
     format: gl::types::GLenum,
     pub extent: Extent2D,
@@ -152,6 +180,7 @@ impl Texture {
 
         Texture {
             handle,
+            id: 0,
             target: Self::samples_as_target(samples),
             format,
             extent,
