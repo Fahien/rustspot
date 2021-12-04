@@ -1,3 +1,4 @@
+use std::iter::FromIterator;
 use std::marker::PhantomData;
 use std::ops::{Deref, DerefMut};
 use std::time::{Duration, Instant};
@@ -121,6 +122,30 @@ impl<T> Pack<T> {
     }
 }
 
+impl<T> From<Vec<T>> for Pack<T> {
+    fn from(vec: Vec<T>) -> Self {
+        let mut ret = Self::new();
+
+        for elem in vec {
+            ret.push(elem);
+        }
+
+        ret
+    }
+}
+
+impl<T> FromIterator<T> for Pack<T> {
+    fn from_iter<I: IntoIterator<Item = T>>(iter: I) -> Self {
+        let mut ret = Self::new();
+
+        for elem in iter {
+            ret.push(elem);
+        }
+
+        ret
+    }
+}
+
 impl<T> Deref for Pack<T> {
     type Target = Vec<T>;
 
@@ -206,5 +231,29 @@ impl Timer {
     /// Returns the time of last `get_delta()`
     pub fn get_prev(&self) -> Instant {
         self.prev
+    }
+}
+
+pub struct ScopedTimer<'a> {
+    timer: Timer,
+    message: &'a str,
+}
+
+impl<'a> ScopedTimer<'a> {
+    pub fn new(msg: &'a str) -> Self {
+        Self {
+            timer: Timer::new(),
+            message: msg,
+        }
+    }
+}
+
+impl<'a> Drop for ScopedTimer<'a> {
+    fn drop(&mut self) {
+        println!(
+            "{} ({}s)",
+            self.message,
+            self.timer.get_delta().as_secs_f32()
+        );
     }
 }
