@@ -331,6 +331,18 @@ impl CustomShader for {}Shader {{
             );
         }
 
+        if uniform_strings.contains("billboard") {
+            generated_code.push_str(
+                r#"
+            let mut cam_pos = node.trs.get_translation();
+            cam_pos.y = 0.0;
+            let up = na::Vector3::y();
+            let billboard = na::Rotation3::face_towards(&cam_pos, &up).to_homogeneous().remove_column(3).remove_row(3);
+            gl::UniformMatrix3fv(self.loc.billboard, 1, gl::FALSE, billboard.as_ptr());
+"#
+            )
+        }
+
         generated_code.push_str("        }\n    }\n");
     }
 

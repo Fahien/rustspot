@@ -244,10 +244,17 @@ impl Trs {
     }
 
     pub fn get_forward(&self) -> na::Vector3<f32> {
-        // This does not work
+        // Does this work?
         self.isometry
             .rotation
             .transform_vector(&-na::Vector3::z())
+            .normalize()
+    }
+
+    pub fn get_right(&self) -> na::Vector3<f32> {
+        self.isometry
+            .rotation
+            .transform_vector(&na::Vector3::x())
             .normalize()
     }
 }

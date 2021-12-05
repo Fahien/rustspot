@@ -8,6 +8,7 @@ uniform mat4 model;
 // There is a limit of 256 uniforms per shader
 uniform mat4 models[128];
 uniform mat4 view;
+uniform mat3 billboard;
 uniform mat4 proj;
 uniform mat3 model_intr;
 uniform mat4 light_space;
@@ -93,11 +94,12 @@ void main() {
     float wind_strength = 1.0;
     mat3 rotation = rot_from_axis_angle(wind_direction, wind * wind_strength * in_pos.y);
 
+    // Rotate to face the camera, like a billboard
     // Rotate first, then translate
-    mat4 model_tmp = instance_model * mat4(rotation) * model;
+    mat4 model_tmp = instance_model * mat4(billboard * rotation) * model;
 
     // Update normal with our new model matrix
-    normal = inverse(transpose(mat3(model_tmp))) * in_normal;
+    normal = inverse(transpose(mat3(model_tmp))) * normalize(in_normal);
 
     vec4 model_pos = model_tmp * vec4(in_pos, 1.0);
 
@@ -105,3 +107,4 @@ void main() {
 
     gl_Position = proj * view * model_pos;
 }
+

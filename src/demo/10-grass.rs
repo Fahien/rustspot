@@ -34,16 +34,18 @@ fn main() {
                 sdl2::event::Event::Quit { .. } => break 'gameloop,
                 sdl2::event::Event::MouseMotion { xrel, yrel, .. } => {
                     let node = grass.model.nodes.get_mut(grass.camera).unwrap();
+                    let right = na::Unit::new_normalize(node.trs.get_right());
                     let y_rotation = na::UnitQuaternion::from_axis_angle(
-                        &na::Vector3::x_axis(),
-                        yrel as f32 / height as f32,
+                        &right,
+                        4.0 * yrel as f32 / height as f32,
                     );
+                    node.trs.rotate(&y_rotation);
+
                     let z_rotation = na::UnitQuaternion::from_axis_angle(
                         &na::Vector3::y_axis(),
-                        -xrel as f32 / width as f32,
+                        4.0 * -xrel as f32 / width as f32,
                     );
-                    let rotation = y_rotation * z_rotation;
-                    node.trs.rotate(&rotation);
+                    node.trs.rotate(&z_rotation);
                 }
                 sdl2::event::Event::MouseWheel { y, .. } => {
                     let node = grass.model.nodes.get_mut(grass.camera).unwrap();
@@ -104,10 +106,6 @@ fn main() {
                 _ => println!("{:?}", event),
             }
         }
-
-        spot.gfx
-            .renderer
-            .draw(&grass.model, grass.root, &na::Matrix4::identity());
 
         let frame = spot.gfx.next_frame();
         spot.gfx
