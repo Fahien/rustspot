@@ -205,24 +205,27 @@ impl Renderer {
             gl::Enable(gl::DEPTH_TEST);
             gl::Disable(gl::SCISSOR_TEST);
 
-            gl::ClearColor(0.6, 0.5, 1.0, 0.0);
-            gl::Clear(gl::COLOR_BUFFER_BIT | gl::DEPTH_BUFFER_BIT);
+            gl::Clear(gl::DEPTH_BUFFER_BIT);
         }
 
         // Draw only depth
         let draw_shadow_program = &self.custom_shaders[Shaders::DEPTH as usize];
         draw_shadow_program.bind();
 
-        // Bind directional light as camera view
-        let light_node = model.nodes.get(self.directional_light).unwrap();
-        // Create orthographic camera but how big?
-        let camera = Camera::orthographic(
-            framebuffer.virtual_extent.width / 64,
-            framebuffer.virtual_extent.height / 64,
-        );
-        draw_shadow_program.bind_camera(&camera, &light_node);
-        // Keep track for next pass
-        self.light_space = camera.proj * light_node.trs.get_view();
+        if let Some(light_node) = model.nodes.get(self.directional_light) {
+            // Bind directional light as camera view
+            // Create orthographic camera but how big?
+            let camera = Camera::orthographic(
+                framebuffer.virtual_extent.width / 64,
+                framebuffer.virtual_extent.height / 64,
+            );
+            draw_shadow_program.bind_camera(&camera, &light_node);
+            // Keep track for next pass
+            self.light_space = camera.proj * light_node.trs.get_view();
+        } else {
+            // No light, skip rendering
+            return;
+        }
 
         // Draw the scene from the light point of view
         for (primitive_id, node_res) in self.primitives.iter() {
