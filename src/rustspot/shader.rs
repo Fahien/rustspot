@@ -1,6 +1,7 @@
 use crate::*;
 use nalgebra as na;
 use std::any::Any;
+use std::collections::HashMap;
 use std::{ffi::CString, fs::File, io::Read, path::Path};
 
 pub struct Shader {
@@ -188,6 +189,13 @@ pub trait CustomShader {
     fn bind_sun(&self, light_color: &[f32; 3], light_node: &Node, light_space: &na::Matrix4<f32>) {}
     fn bind_shadow(&self, shadow_map: u32) {}
     fn bind_camera(&self, camera: &Camera, camera_node: &Node) {}
+    fn bind_material(
+        &self,
+        textures: &Pack<Texture>,
+        colors: &HashMap<Color, Texture>,
+        material: &Material,
+    ) {
+    }
     fn bind_primitive(&self, primitive: &Primitive) {}
     fn bind_node(&self, node: &Node, transform: &na::Matrix4<f32>) {}
 

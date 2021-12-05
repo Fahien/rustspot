@@ -101,9 +101,11 @@ impl ModelBuilder {
         let accessor_offset = accessor.offset();
         let offset = accessor_offset + view_offset;
         assert!(offset < buffer.length());
+        let end_offset = view_offset + view_len;
+        assert!(end_offset <= buffer.length());
 
         let data = &self.uri_buffers[buffer.index()];
-        &data[offset..offset + view_len]
+        &data[offset..end_offset]
     }
 
     pub fn load_textures(&mut self, model: &mut Model) {
@@ -216,6 +218,9 @@ impl ModelBuilder {
                 }
             }
 
+            material.metallic = pbr.metallic_factor();
+            material.roughness = pbr.roughness_factor();
+
             model.materials.push(material);
         }
 
@@ -310,7 +315,7 @@ impl ModelBuilder {
                         gltf::mesh::Semantic::TexCoords(_) => {
                             self.load_tex_coords(&mut vertices, &accessor)?
                         }
-                        _ => unimplemented!(),
+                        _ => println!("Semantic not implemented {:?}", semantic),
                     }
                 }
 

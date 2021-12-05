@@ -431,7 +431,7 @@ impl Renderer {
                     let primitive_ids = &self.materials[material_id];
 
                     let material = &model.materials[*material_id];
-                    material.bind(&model.textures, &model.colors);
+                    shader.bind_material(&model.textures, &model.colors, material);
 
                     for primitive_id in primitive_ids.iter() {
                         let primitive = &model.primitives[*primitive_id];

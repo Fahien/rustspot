@@ -9,6 +9,7 @@ uniform mat4 proj;
 uniform mat3 model_intr;
 uniform mat4 light_space;
 
+out vec3 world_pos;
 out vec3 color;
 out vec2 tex_coords;
 out vec3 normal;
@@ -20,6 +21,7 @@ void main() {
     normal = model_intr * in_normal;
 
     vec4 model_pos = model * vec4(in_pos, 1.0);
+    world_pos = model_pos.xyz;
 
     pos_light_space = light_space * model_pos;
 

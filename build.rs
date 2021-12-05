@@ -18,6 +18,7 @@ use std::path::Path;
 use std::fs::File;
 use std::io::Read;
 use std::any::Any;
+use std::collections::HashMap;
 
 use nalgebra as na;
 
@@ -154,7 +155,7 @@ fn generate(shaders_path: &Path, shader_prefix: &str) -> Result<String, Box<dyn 
 
     let shader_camel = to_camelcase(shader_prefix);
 
-    let mut generated_code = std::format!("pub struct {}Loc {{\n", shader_camel);
+    let mut generated_code = std::format!("\npub struct {}Loc {{\n", shader_camel);
 
     for uniform in &uniform_strings {
         generated_code.push_str(&std::format!("    pub {}: i32,\n", uniform));
@@ -222,8 +223,7 @@ impl {}Shader {{
     ));
 
     generated_code.push_str(&std::format!(
-        r#"
-}}
+        r#"}}
 
 impl CustomShader for {}Shader {{
     fn as_any(&self) -> &dyn Any {{
@@ -314,15 +314,62 @@ impl CustomShader for {}Shader {{
     if uniform_strings.contains("view") {
         generated_code.push_str(
             r#"
-    fn bind_camera(&self, camera: &Camera, view: &Node) {
-        let view = view.trs.get_view();
+    fn bind_camera(&self, camera: &Camera, node: &Node) {
+        let view = node.trs.get_view();
         unsafe {
             gl::UniformMatrix4fv(self.loc.view, 1, gl::FALSE, view.as_ptr());
             gl::UniformMatrix4fv(self.loc.proj, 1, gl::FALSE, camera.proj.as_ptr());
-        }
-    }
 "#,
         );
+
+        if uniform_strings.contains("cam_pos") {
+            generated_code.push_str(
+                r#"
+            let pos = node.trs.get_translation();
+            gl::Uniform3fv(self.loc.cam_pos, 1, pos.as_ptr());
+"#,
+            );
+        }
+
+        generated_code.push_str("        }\n    }\n");
+    }
+
+    // Bind material
+    if uniform_strings.contains("tex_sampler") {
+        generated_code.push_str(r#"
+    fn bind_material(&self, textures: &Pack<Texture>, colors: &HashMap<Color, Texture>, material: &Material) {
+        // Bind albedo map
+        if let Some(texture_handle) = material.texture {
+            textures.get(texture_handle).unwrap().bind();
+        } else {
+            colors.get(&material.color).unwrap().bind();
+        }
+
+        // Bind normal map
+        if let Some(normals_handle) = material.normals {
+            unsafe {
+                gl::ActiveTexture(gl::TEXTURE0 + 2);
+            }
+            textures.get(normals_handle).unwrap().bind();
+            unsafe {
+                gl::ActiveTexture(gl::TEXTURE0);
+            }
+        }
+"#);
+
+        if uniform_strings.contains("metallic") {
+            generated_code.push_str(
+                "\n        unsafe { gl::Uniform1f(self.loc.metallic, material.metallic); }\n",
+            );
+        }
+
+        if uniform_strings.contains("metallic") {
+            generated_code.push_str(
+                "        unsafe { gl::Uniform1f(self.loc.roughness, material.roughness); }\n",
+            );
+        }
+
+        generated_code.push_str("    }\n");
     }
 
     // Bind node

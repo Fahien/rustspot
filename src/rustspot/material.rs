@@ -2,8 +2,6 @@
 // Author: Antonio Caggiano <info@antoniocaggiano.eu>
 // SPDX-License-Identifier: MIT
 
-use std::collections::HashMap;
-
 use crate::*;
 
 pub struct MaterialBuilder {
@@ -49,6 +47,10 @@ pub struct Material {
     pub color: Color,
     pub texture: Option<Handle<Texture>>,
     pub normals: Option<Handle<Texture>>,
+
+    // PBR factors
+    pub metallic: f32,
+    pub roughness: f32,
 }
 
 impl Material {
@@ -62,26 +64,8 @@ impl Material {
             color: Color::new(),
             texture: None,
             normals: None,
-        }
-    }
-
-    pub fn bind(&self, textures: &Pack<Texture>, colors: &HashMap<Color, Texture>) {
-        // Bind albedo map
-        if let Some(texture_handle) = self.texture {
-            textures.get(texture_handle).unwrap().bind();
-        } else {
-            colors.get(&self.color).unwrap().bind();
-        }
-
-        // Bind normal map
-        if let Some(normals_handle) = self.normals {
-            unsafe {
-                gl::ActiveTexture(gl::TEXTURE0 + 2);
-            }
-            textures.get(normals_handle).unwrap().bind();
-            unsafe {
-                gl::ActiveTexture(gl::TEXTURE0);
-            }
+            metallic: 1.0,
+            roughness: 1.0,
         }
     }
 }
