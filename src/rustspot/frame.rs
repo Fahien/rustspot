@@ -197,8 +197,8 @@ pub struct CustomFramebuffer {
 
 impl CustomFramebuffer {
     fn geometry(extent: Extent2D) -> Self {
-        let color_texture = Texture::color(extent, 4);
-        let depth_texture = Texture::depth(extent, 4);
+        let color_texture = Texture::color(extent, 1);
+        let depth_texture = Texture::depth(extent, 1);
         let framebuffer = Framebuffer::builder()
             .extent(extent)
             .color_attachment(&color_texture)

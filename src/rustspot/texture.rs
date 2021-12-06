@@ -196,22 +196,14 @@ impl Texture {
 
             unsafe {
                 // Clamping to border is important for the shadowmap
-                gl::TexParameteri(
-                    gl::TEXTURE_2D,
-                    gl::TEXTURE_WRAP_S,
-                    gl::CLAMP_TO_BORDER as i32,
-                );
-                gl::TexParameteri(
-                    gl::TEXTURE_2D,
-                    gl::TEXTURE_WRAP_T,
-                    gl::CLAMP_TO_BORDER as i32,
-                );
+                gl::TexParameteri(self.target, gl::TEXTURE_WRAP_S, gl::CLAMP_TO_BORDER as i32);
+                gl::TexParameteri(self.target, gl::TEXTURE_WRAP_T, gl::CLAMP_TO_BORDER as i32);
 
-                gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MIN_FILTER, gl::NEAREST as i32);
-                gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MAG_FILTER, gl::NEAREST as i32);
+                gl::TexParameteri(self.target, gl::TEXTURE_MIN_FILTER, gl::LINEAR as i32);
+                gl::TexParameteri(self.target, gl::TEXTURE_MAG_FILTER, gl::LINEAR as i32);
 
                 let transparent: [f32; 4] = [1.0, 1.0, 1.0, 0.0];
-                gl::TexParameterfv(gl::TEXTURE_2D, gl::TEXTURE_BORDER_COLOR, &transparent as _);
+                gl::TexParameterfv(self.target, gl::TEXTURE_BORDER_COLOR, &transparent as _);
             }
         } else {
             let internal_format = to_gl_renderable_format(self.format);
@@ -219,21 +211,21 @@ impl Texture {
             unsafe {
                 if cfg!(feature = "gles") {
                     gl::TexStorage2DMultisample(
-                        gl::TEXTURE_2D_MULTISAMPLE,
+                        self.target,
                         self.samples as _,
                         internal_format,
                         self.extent.width as _,
                         self.extent.height as _,
-                        gl::FALSE,
+                        gl::TRUE,
                     );
                 } else {
                     gl::TexImage2DMultisample(
-                        gl::TEXTURE_2D_MULTISAMPLE,
+                        self.target,
                         self.samples as _,
                         internal_format,
                         self.extent.width as _,
                         self.extent.height as _,
-                        gl::FALSE,
+                        gl::TRUE,
                     );
                 }
             }
@@ -300,8 +292,12 @@ impl Texture {
 
             gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_WRAP_S, gl::REPEAT as i32);
             gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_WRAP_T, gl::REPEAT as i32);
-            gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MIN_FILTER, gl::NEAREST as i32);
-            gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MAG_FILTER, gl::NEAREST as i32);
+            gl::TexParameteri(
+                gl::TEXTURE_2D,
+                gl::TEXTURE_MIN_FILTER,
+                gl::LINEAR_MIPMAP_LINEAR as i32,
+            );
+            gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MAG_FILTER, gl::LINEAR as i32);
         }
     }
 }

@@ -355,8 +355,6 @@ impl Video {
 
         gl::load_with(|symbol| system.gl_get_proc_address(symbol) as *const _);
 
-        unsafe { gl::Enable(gl::MULTISAMPLE) };
-
         Self {
             extent,
             system,

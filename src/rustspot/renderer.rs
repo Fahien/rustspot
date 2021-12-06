@@ -36,6 +36,8 @@ pub struct Renderer {
 
     pub read_depth_program: ShaderProgram,
     pub read_color_program: ShaderProgram,
+    pub read_depth_ms_program: ShaderProgram,
+    pub read_color_ms_program: ShaderProgram,
 
     /// Orthographic camera and node for camera
     pub screen_camera: Camera,
@@ -65,6 +67,16 @@ impl Renderer {
             "res/shader/read-color.frag.glsl",
         );
 
+        let read_depth_ms_program = ShaderProgram::open(
+            "res/shader/unlit.vert.glsl",
+            "res/shader/read-depth-ms.frag.glsl",
+        );
+
+        let read_color_ms_program = ShaderProgram::open(
+            "res/shader/unlit.vert.glsl",
+            "res/shader/read-color-ms.frag.glsl",
+        );
+
         let screen_camera = Camera::orthographic(1, 1);
         let mut screen_node = Node::new();
         screen_node.trs.translate(0.0, 0.0, 1.0);
@@ -88,6 +100,8 @@ impl Renderer {
 
             read_depth_program,
             read_color_program,
+            read_depth_ms_program,
+            read_color_ms_program,
 
             screen_camera,
             screen_node,
@@ -216,8 +230,8 @@ impl Renderer {
             // Bind directional light as camera view
             // Create orthographic camera but how big?
             let camera = Camera::orthographic(
-                framebuffer.virtual_extent.width / 64,
-                framebuffer.virtual_extent.height / 64,
+                framebuffer.virtual_extent.width / 16,
+                framebuffer.virtual_extent.height / 16,
             );
             draw_shadow_program.bind_camera(&camera, &light_node);
             // Keep track for next pass
@@ -264,25 +278,31 @@ impl Renderer {
             gl::Clear(gl::COLOR_BUFFER_BIT | gl::DEPTH_BUFFER_BIT);
         }
 
+        let read_depth_program = if depth_texture.samples > 1 {
+            &self.read_depth_ms_program
+        } else {
+            &self.read_depth_program
+        };
+
         // Bind depth read shader
-        self.read_depth_program.enable();
+        read_depth_program.enable();
 
         // Bind extent and samples
         unsafe {
             gl::Uniform2f(
-                self.read_depth_program.loc.extent,
+                read_depth_program.loc.extent,
                 depth_texture.extent.width as f32,
                 depth_texture.extent.height as f32,
             );
             gl::Uniform1i(
-                self.read_depth_program.loc.tex_samples,
+                read_depth_program.loc.tex_samples,
                 depth_texture.samples as i32,
             );
         }
 
         // Bind camera
         self.screen_camera
-            .bind(&self.read_depth_program, &self.screen_node);
+            .bind(read_depth_program, &self.screen_node);
 
         // Bind texture
         depth_texture.bind();
@@ -292,7 +312,7 @@ impl Renderer {
 
         // Bind node
         self.quad_node
-            .bind(&self.read_depth_program, &na::Matrix4::identity());
+            .bind(read_depth_program, &na::Matrix4::identity());
 
         // Draw
         self.quad_primitive.draw();
@@ -318,7 +338,7 @@ impl Renderer {
                     framebuffer.extent.width as _,
                     framebuffer.extent.height as _,
                     gl::COLOR_BUFFER_BIT,
-                    gl::NEAREST,
+                    gl::LINEAR,
                 );
             }
         } else {
@@ -335,26 +355,33 @@ impl Renderer {
                 gl::Clear(gl::COLOR_BUFFER_BIT | gl::DEPTH_BUFFER_BIT);
             }
 
+            let color_texture = &source.color_textures[0];
+
+            let read_color_program = if color_texture.samples > 1 {
+                &self.read_color_ms_program
+            } else {
+                &self.read_color_program
+            };
+
             // Bind color read shader
-            self.read_color_program.enable();
+            read_color_program.enable();
 
             // Bind extent
-            let color_texture = &source.color_textures[0];
             unsafe {
                 gl::Uniform2f(
-                    self.read_color_program.loc.extent,
+                    read_color_program.loc.extent,
                     color_texture.extent.width as f32,
                     color_texture.extent.height as f32,
                 );
                 gl::Uniform1i(
-                    self.read_color_program.loc.tex_samples,
+                    read_color_program.loc.tex_samples,
                     color_texture.samples as _,
                 );
             }
 
             // Bind camera
             self.screen_camera
-                .bind(&self.read_color_program, &self.screen_node);
+                .bind(read_color_program, &self.screen_node);
 
             // Bind texture
             color_texture.bind();
@@ -364,7 +391,7 @@ impl Renderer {
 
             // Bind node
             self.quad_node
-                .bind(&self.read_color_program, &na::Matrix4::identity());
+                .bind(read_color_program, &na::Matrix4::identity());
 
             // Draw
             self.quad_primitive.draw();
