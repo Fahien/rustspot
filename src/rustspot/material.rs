@@ -8,6 +8,7 @@ pub struct MaterialBuilder {
     shader: Shaders,
     texture: Option<Handle<Texture>>,
     normals: Option<Handle<Texture>>,
+    metallic_roughness: Option<Handle<Texture>>,
 
     metallic: f32,
     roughness: f32,
@@ -19,6 +20,7 @@ impl MaterialBuilder {
             shader: Shaders::DEFAULT,
             texture: None,
             normals: None,
+            metallic_roughness: None,
             metallic: 1.0,
             roughness: 1.0,
         }
@@ -36,6 +38,11 @@ impl MaterialBuilder {
 
     pub fn normals(mut self, normals: Handle<Texture>) -> Self {
         self.normals = Some(normals);
+        self
+    }
+
+    pub fn metallic_roughness(mut self, metallic_roughness: Handle<Texture>) -> Self {
+        self.metallic_roughness = Some(metallic_roughness);
         self
     }
 
@@ -66,6 +73,7 @@ pub struct Material {
     pub normals: Option<Handle<Texture>>,
 
     // PBR factors
+    pub metallic_roughness: Option<Handle<Texture>>,
     pub metallic: f32,
     pub roughness: f32,
 }
@@ -81,6 +89,7 @@ impl Material {
             color: Color::new(),
             texture: None,
             normals: None,
+            metallic_roughness: None,
             metallic: 1.0,
             roughness: 1.0,
         }

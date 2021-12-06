@@ -218,6 +218,30 @@ impl ModelBuilder {
                 }
             }
 
+            // Load metallic rougness texture
+            if let Some(gtexture) = pbr.metallic_roughness_texture() {
+                match gtexture.texture().source().source() {
+                    gltf::image::Source::Uri { uri, .. } => {
+                        let uri = self.parent_dir.join(uri);
+                        // Find texture by path
+                        let (texture_id, _) = model
+                            .textures
+                            .iter()
+                            .enumerate()
+                            .find(|(_, texture)| {
+                                texture.path.is_some() && *texture.path.as_ref().unwrap() == uri
+                            })
+                            .unwrap();
+
+                        let texture_handle = Handle::new(texture_id);
+
+                        material.metallic_roughness = Some(texture_handle);
+                        material.shader = Shaders::LIGHTSHADOWMR;
+                    }
+                    _ => unimplemented!(),
+                }
+            }
+
             material.metallic = pbr.metallic_factor();
             material.roughness = pbr.roughness_factor();
 

@@ -361,13 +361,26 @@ impl CustomShader for {}Shader {{
         if let Some(normals_handle) = material.normals {
             unsafe {
                 gl::ActiveTexture(gl::TEXTURE0 + 2);
-            }
-            textures.get(normals_handle).unwrap().bind();
-            unsafe {
+                textures.get(normals_handle).unwrap().bind();
                 gl::ActiveTexture(gl::TEXTURE0);
             }
         }
 "#);
+
+        if uniform_strings.contains("mr_sampler") {
+            generated_code.push_str(
+                r#"
+        // Bind metallic roughness texture
+        if let Some(mr_handle) = material.metallic_roughness {
+            unsafe {
+                gl::ActiveTexture(gl::TEXTURE0 + 3);
+                textures.get(mr_handle).unwrap().bind();
+                gl::ActiveTexture(gl::TEXTURE0);
+            }
+        }
+"#,
+            );
+        }
 
         if uniform_strings.contains("metallic") {
             generated_code.push_str(
