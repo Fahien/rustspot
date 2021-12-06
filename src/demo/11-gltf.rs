@@ -13,8 +13,8 @@ fn main() -> Result<(), Box<dyn Error>> {
     let mut spot = Spot::builder()
         .width(extent.width)
         .height(extent.height)
-        .offscreen_width(extent.width)
-        .offscreen_height(extent.height)
+        .offscreen_width(extent.width * 2)
+        .offscreen_height(extent.height * 2)
         .build();
 
     spot.gfx.renderer.sky.enabled = true;
@@ -29,12 +29,12 @@ fn main() -> Result<(), Box<dyn Error>> {
     let root = Handle::new(0);
 
     model.nodes.get_mut(root).unwrap().children.push(camera);
-    model
-        .nodes
-        .get_mut(root)
-        .unwrap()
-        .children
-        .push(terrain.root);
+    //model
+    //    .nodes
+    //    .get_mut(root)
+    //    .unwrap()
+    //    .children
+    //    .push(terrain.root);
 
     'gameloop: loop {
         // Handle SDL2 events
@@ -45,16 +45,18 @@ fn main() -> Result<(), Box<dyn Error>> {
                 sdl2::event::Event::Quit { .. } => break 'gameloop,
                 sdl2::event::Event::MouseMotion { xrel, yrel, .. } => {
                     let node = model.nodes.get_mut(camera).unwrap();
+                    let right = na::Unit::new_normalize(node.trs.get_right());
                     let y_rotation = na::UnitQuaternion::from_axis_angle(
-                        &na::Vector3::x_axis(),
-                        yrel as f32 / extent.height as f32,
+                        &right,
+                        4.0 * yrel as f32 / extent.height as f32,
                     );
+                    node.trs.rotate(&y_rotation);
+
                     let z_rotation = na::UnitQuaternion::from_axis_angle(
                         &na::Vector3::y_axis(),
-                        -xrel as f32 / extent.width as f32,
+                        4.0 * -xrel as f32 / extent.width as f32,
                     );
-                    let rotation = y_rotation * z_rotation;
-                    node.trs.rotate(&rotation);
+                    node.trs.rotate(&z_rotation);
                 }
                 sdl2::event::Event::MouseWheel { y, .. } => {
                     let node = model.nodes.get_mut(camera).unwrap();
@@ -131,11 +133,11 @@ fn create_light(model: &mut Model) {
         .name("Light".to_string())
         .directional_light(light)
         .build();
-    light_node.trs.translate(2.0, 0.0, 8.0);
     light_node.trs.rotate(&na::UnitQuaternion::from_axis_angle(
         &na::Vector3::x_axis(),
-        -std::f32::consts::FRAC_PI_4,
+        -(0.2 + std::f32::consts::FRAC_PI_4 + std::f32::consts::FRAC_PI_8),
     ));
+    light_node.trs.translate(2.0, 40.0, 16.0);
 
     let light_node = model.nodes.push(light_node);
     model
@@ -153,6 +155,11 @@ fn create_camera(model: &mut Model) -> Handle<Node> {
         .name("Camera".to_string())
         .camera(camera)
         .build();
-    camera_node.trs.translate(0.0, 1.0, 2.0);
+
+   // camera_node.trs.rotate(&na::UnitQuaternion::from_axis_angle(
+   //     &na::Vector3::x_axis(),
+   //     -(0.2 + std::f32::consts::FRAC_PI_4 + std::f32::consts::FRAC_PI_8),
+   // ));
+    camera_node.trs.translate(0.0, 4.0, 0.0);
     model.nodes.push(camera_node)
 }
