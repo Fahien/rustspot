@@ -7,14 +7,7 @@ use nalgebra as na;
 use rustspot::*;
 
 fn main() {
-    let width = 480;
-    let height = 320;
-    let mut spot = Spot::builder()
-        .width(width)
-        .height(height)
-        .offscreen_width(width / 2)
-        .offscreen_height(height / 2)
-        .build();
+    let mut spot = Spot::builder().build();
 
     let (mut model, root) = create_model();
 

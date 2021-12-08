@@ -1,5 +1,7 @@
 use std::time::Duration;
 
+use clap::{App, Arg, ArgMatches};
+
 pub mod shader;
 pub use shader::*;
 
@@ -48,17 +50,57 @@ pub use gfx::*;
 pub mod util;
 pub use util::*;
 
-pub struct SpotBuilder {
+pub struct SpotBuilder<'a, 'b> {
     extent: Extent2D,
     offscreen_extent: Extent2D,
+
+    app: App<'a, 'b>,
 }
 
-impl SpotBuilder {
+impl<'a, 'b> SpotBuilder<'a, 'b> {
+    fn parse_extent(matches: &ArgMatches, name: &str) -> Option<Extent2D> {
+        if let Some(extent) = matches.value_of(name) {
+            let mut extent = extent.split('x');
+            let extent_width = extent
+                .next()
+                .unwrap()
+                .parse()
+                .expect("Failed to get extent width");
+            let extent_height = extent
+                .next()
+                .unwrap()
+                .parse()
+                .expect("Failed to get extent height");
+            Some(Extent2D::new(extent_width, extent_height))
+        } else {
+            None
+        }
+    }
+
     pub fn new() -> Self {
+        let extent_arg = Arg::with_name("extent").short("e").default_value("480x320");
+        let offscreen_extent_arg = Arg::with_name("offscreen-extent")
+            .short("o")
+            .default_value("480x320");
+
+        let app = App::new("RustSpot")
+            .version("0.1.0")
+            .author("Antonio Caggiano <info@antoniocaggiano.eu>")
+            .about("OpenGL renderer")
+            .arg(extent_arg)
+            .arg(offscreen_extent_arg);
+
         Self {
             extent: Extent2D::new(480, 320),
             offscreen_extent: Extent2D::new(480, 320),
+            app,
         }
+    }
+
+    /// This can be used before calling `build_with_matches()` to add more user specific CLI args
+    pub fn arg(mut self, arg: Arg<'a, 'b>) -> Self {
+        self.app = self.app.arg(arg);
+        self
     }
 
     pub fn extent(mut self, extent: Extent2D) -> Self {
@@ -92,7 +134,21 @@ impl SpotBuilder {
     }
 
     pub fn build(self) -> Spot {
-        Spot::new(self.extent, self.offscreen_extent)
+        let (spot, _) = self.build_with_matches();
+        spot
+    }
+
+    pub fn build_with_matches(mut self) -> (Spot, ArgMatches<'a>) {
+        let matches = self.app.get_matches();
+
+        if let Some(extent) = Self::parse_extent(&matches, "extent") {
+            self.extent = extent;
+        }
+        if let Some(offscreen_extent) = Self::parse_extent(&matches, "offscreen-extent") {
+            self.offscreen_extent = offscreen_extent;
+        }
+
+        (Spot::new(self.extent, self.offscreen_extent), matches)
     }
 }
 
@@ -106,7 +162,7 @@ pub struct Spot {
 }
 
 impl Spot {
-    pub fn builder() -> SpotBuilder {
+    pub fn builder<'a, 'b>() -> SpotBuilder<'a, 'b> {
         SpotBuilder::new()
     }
 
