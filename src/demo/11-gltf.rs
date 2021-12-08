@@ -4,23 +4,22 @@
 
 use std::error::Error;
 
+use clap::Arg;
 use nalgebra as na;
 
 use rustspot::*;
 
 fn main() -> Result<(), Box<dyn Error>> {
-    let extent = Extent2D::new(480 * 2, 320 * 2);
-    let mut spot = Spot::builder()
-        .width(extent.width)
-        .height(extent.height)
-        .offscreen_width(extent.width * 2)
-        .offscreen_height(extent.height * 2)
-        .build();
-
-    spot.gfx.renderer.sky.enabled = true;
+    let spot_builder = Spot::builder().arg(
+        Arg::with_name("file")
+            .short("f")
+            .default_value("res/model/box/box.gltf"),
+    );
+    let (mut spot, matches) = spot_builder.build_with_matches();
 
     // Load gltf
-    let mut model = Model::builder("res/model/duck/duck.gltf")?.build()?;
+    let file_path = matches.value_of("file").unwrap();
+    let mut model = Model::builder(file_path)?.build()?;
     let mut terrain = Terrain::new(&mut model);
     terrain.set_scale(&mut model, 64.0);
     create_light(&mut model);
@@ -36,6 +35,8 @@ fn main() -> Result<(), Box<dyn Error>> {
     //    .children
     //    .push(terrain.root);
 
+    spot.gfx.renderer.sky.enabled = true;
+
     'gameloop: loop {
         // Handle SDL2 events
         for event in spot.events.poll_iter() {
@@ -44,6 +45,8 @@ fn main() -> Result<(), Box<dyn Error>> {
             match event {
                 sdl2::event::Event::Quit { .. } => break 'gameloop,
                 sdl2::event::Event::MouseMotion { xrel, yrel, .. } => {
+                    let extent = spot.gfx.video.extent;
+
                     let node = model.nodes.get_mut(camera).unwrap();
                     let right = na::Unit::new_normalize(node.trs.get_right());
                     let y_rotation = na::UnitQuaternion::from_axis_angle(
@@ -60,7 +63,7 @@ fn main() -> Result<(), Box<dyn Error>> {
                 }
                 sdl2::event::Event::MouseWheel { y, .. } => {
                     let node = model.nodes.get_mut(camera).unwrap();
-                    let forward = node.trs.get_forward().scale(y as f32);
+                    let forward = node.trs.get_forward().scale(0.125 * y as f32);
                     node.trs.translate(forward.x, forward.y, forward.z);
                 }
                 _ => println!("{:?}", event),
@@ -124,9 +127,11 @@ fn print_family(ui: &imgui::Ui, node: &Node, model: &Model, indent: String) {
 }
 
 fn create_light(model: &mut Model) {
-    let light = model
-        .directional_lights
-        .push(DirectionalLight::color(1.0, 1.0, 1.0));
+    let light = model.directional_lights.push(DirectionalLight::color(
+        244.0 / 255.0,
+        233.0 / 255.0,
+        205.0 / 255.0,
+    ));
 
     let mut light_node = Node::builder()
         .id(model.nodes.len() as u32)
@@ -156,10 +161,10 @@ fn create_camera(model: &mut Model) -> Handle<Node> {
         .camera(camera)
         .build();
 
-   // camera_node.trs.rotate(&na::UnitQuaternion::from_axis_angle(
-   //     &na::Vector3::x_axis(),
-   //     -(0.2 + std::f32::consts::FRAC_PI_4 + std::f32::consts::FRAC_PI_8),
-   // ));
-    camera_node.trs.translate(0.0, 4.0, 0.0);
+    // camera_node.trs.rotate(&na::UnitQuaternion::from_axis_angle(
+    //     &na::Vector3::x_axis(),
+    //     -(0.2 + std::f32::consts::FRAC_PI_4 + std::f32::consts::FRAC_PI_8),
+    // ));
+    camera_node.trs.translate(0.0, 0.35, 0.0);
     model.nodes.push(camera_node)
 }
