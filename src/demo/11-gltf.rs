@@ -77,6 +77,28 @@ fn main() -> Result<(), Box<dyn Error>> {
                     let forward = node.trs.get_forward().scale(0.125 * y as f32);
                     node.trs.translate(forward.x, forward.y, forward.z);
                 }
+                sdl2::event::Event::KeyDown {
+                    keycode: Some(sdl2::keyboard::Keycode::Up),
+                    ..
+                } => {
+                    spot.gfx.renderer.override_shader =
+                        if let Some(override_shader) = spot.gfx.renderer.override_shader {
+                            override_shader.next()
+                        } else {
+                            Some(Shaders::DEFAULT)
+                        };
+                }
+                sdl2::event::Event::KeyDown {
+                    keycode: Some(sdl2::keyboard::Keycode::Down),
+                    ..
+                } => {
+                    spot.gfx.renderer.override_shader =
+                        if let Some(override_shader) = spot.gfx.renderer.override_shader {
+                            override_shader.prev()
+                        } else {
+                            Some(Shaders::UNLIT)
+                        };
+                }
                 _ => println!("{:?}", event),
             }
         }
@@ -107,6 +129,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 
         // Render GUI
         let ui = spot.gfx.gui.frame();
+        let override_shader = spot.gfx.renderer.override_shader.clone();
 
         // Draw gui here before drawing it
         imgui::Window::new(imgui::im_str!("RustSpot"))
@@ -114,6 +137,15 @@ fn main() -> Result<(), Box<dyn Error>> {
             .build(&ui, || {
                 let root = &model.nodes[0];
                 print_family(&ui, root, &model, "".to_string());
+
+                ui.separator();
+
+                let shader = if override_shader.is_some() {
+                    override_shader.as_ref().unwrap().as_str()
+                } else {
+                    "None"
+                };
+                ui.text(format!("Shader: {}", shader));
             });
 
         spot.gfx.renderer.render_gui(ui, &frame.default_framebuffer);
@@ -176,7 +208,7 @@ fn create_camera(model: &mut Model) -> (Handle<Camera>, Handle<Node>) {
     //     &na::Vector3::x_axis(),
     //     -(0.2 + std::f32::consts::FRAC_PI_4 + std::f32::consts::FRAC_PI_8),
     // ));
-    camera_node.trs.translate(0.0, 0.35, 0.0);
+    camera_node.trs.translate(0.0, 0.0, 0.0);
     let node = model.nodes.push(camera_node);
 
     (camera, node)

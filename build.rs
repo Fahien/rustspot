@@ -19,6 +19,7 @@ use std::fs::File;
 use std::io::Read;
 use std::any::Any;
 use std::collections::HashMap;
+use std::fmt;
 
 use nalgebra as na;
 
@@ -55,7 +56,8 @@ fn main() -> Result<(), Box<dyn Error>> {
     let dest_path = Path::new("src/rustspot/shaders.rs");
     fs::write(dest_path, code)?;
 
-    println!("cargo:rerun-if-changed=res/shader;build.rs");
+    println!("cargo:rerun-if-changed=res/shader");
+    println!("cargo:rerun-if-changed=build.rs");
     Ok(())
 }
 
@@ -97,6 +99,113 @@ fn generate_enum(shader_prefixes: &Vec<String>) -> Result<String, Box<dyn Error>
 
     code.push_str("}\n\n");
 
+    // Display enum
+    code.push_str(
+        r#"
+impl fmt::Display for Shaders {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.as_str())
+    }
+}
+"#,
+    );
+
+    // Next method for Shader enum
+    code.push_str(
+        r#"
+impl Shaders {
+    /// Get next shader in the enum
+    pub fn next(&self) -> Option<Self> {
+        match self {
+"#,
+    );
+
+    for i in 0..shader_prefixes.len() {
+        let shader_prefix = &shader_prefixes[i];
+        let shader_camel = to_camelcase(shader_prefix);
+        let shader_upper = shader_camel.to_uppercase();
+
+        let next_upper = if i + 1 < shader_prefixes.len() {
+            let next_index = (i + 1) % shader_prefixes.len();
+            let next_shader = &shader_prefixes[next_index];
+            format!("Some(Self::{})", to_camelcase(next_shader).to_uppercase())
+        } else {
+            "None".to_string()
+        };
+
+        code.push_str(&std::format!(
+            "            Self::{} => {},\n",
+            shader_upper,
+            next_upper
+        ));
+    }
+
+    code.push_str(
+        r#"        }
+    }
+"#,
+    );
+
+    code.push_str(
+        r#"
+    /// Get previous shader in the enum
+    pub fn prev(&self) -> Option<Self> {
+        match self {
+"#,
+    );
+
+    for i in 0..shader_prefixes.len() {
+        let prev_upper = if i > 0 {
+            let shader_prefix = &shader_prefixes[i - 1];
+            let shader_camel = to_camelcase(shader_prefix);
+            format!("Some(Self::{})", shader_camel.to_uppercase())
+        } else {
+            "None".to_string()
+        };
+
+        let shader_prefix = &shader_prefixes[i];
+        let shader_upper = to_camelcase(shader_prefix).to_uppercase();
+
+        code.push_str(&std::format!(
+            "            Self::{} => {},\n",
+            shader_upper,
+            prev_upper
+        ));
+    }
+
+    code.push_str(
+        r#"        }
+    }
+"#,
+    );
+
+    // As string slice
+    code.push_str(
+        r#"
+    pub fn as_str(&self) -> &str {
+        match self {
+"#,
+    );
+
+    for shader_prefix in shader_prefixes {
+        let shader_camel = to_camelcase(shader_prefix);
+        let shader_upper = shader_camel.to_uppercase();
+        code.push_str(&std::format!(
+            "            Self::{} => \"{}\",\n",
+            shader_upper,
+            shader_camel
+        ));
+    }
+
+    code.push_str(
+        r#"        }
+    }
+"#,
+    );
+
+    // End enum impl
+    code.push_str("}\n\n");
+
     Ok(code)
 }
 
@@ -112,7 +221,7 @@ fn generate_create_shaders(shader_prefixes: &Vec<String>) -> Result<String, Box<
         ));
     }
 
-    code.push_str("    ]\n}\n\n");
+    code.push_str("    ]\n}\n");
 
     Ok(code)
 }
@@ -409,17 +518,30 @@ impl CustomShader for {}Shader {{
         );
 
         if uniform_strings.contains("models") {
-            generated_code.push_str(r#"
-            let instance_count = std::cmp::max(1, node.transforms.len());
+            generated_code.push_str(
+                r#"
+        // Instance count
+        let instance_count = std::cmp::max(1, node.transforms.len());
+        if self.loc.instance_count >= 0 {
             unsafe {
                 gl::Uniform1i(
                     self.loc.instance_count,
                     instance_count as _,
                 );
-                gl::UniformMatrix4fv(self.loc.models, instance_count as _, gl::FALSE, node.transforms.as_ptr() as _);
             }
+        }
+
+        // Transforms array
+        let transform_ptr = if node.transforms.len() > 0 {
+            node.transforms.as_ptr() as _
+        } else {
+            transform.as_ptr() as _
+        };
+        unsafe {
+            gl::UniformMatrix4fv(self.loc.models, instance_count as _, gl::FALSE, transform_ptr);
+        }
 "#,
-    );
+            );
         }
 
         if uniform_strings.contains("model_intr") {
@@ -481,14 +603,25 @@ impl CustomShader for {}Shader {{
             for i in 0..draw_calls {
                 let batch_count = std::cmp::min(remaining_instance_count, 128);
                 remaining_instance_count -= batch_count;
+
+                // Instance count
+                if self.loc.instance_count >= 0 {
+                    unsafe {
+                        gl::Uniform1i(
+                            self.loc.instance_count,
+                            instance_count as _,
+                        );
+                    }
+                }
+
+                // Transforms array
+                if node.transforms.len() > 0 {
+                    unsafe {
+                        gl::UniformMatrix4fv(self.loc.models, batch_count as _, gl::FALSE, node.transforms[i * 128].as_ptr() as _);
+                    }
+                }
+
                 unsafe {
-                    gl::Uniform1i(
-                        self.loc.instance_count,
-                        instance_count as _,
-                    );
-
-                    gl::UniformMatrix4fv(self.loc.models, batch_count as _, gl::FALSE, node.transforms[i * 128].as_ptr() as _);
-
                     gl::DrawElementsInstanced(
                         gl::TRIANGLES,
                         primitive.indices.len() as _,

@@ -13,7 +13,11 @@ pub struct Renderer {
 
     gui_res: GuiRes,
 
+    /// List of shaders available for rendering
     custom_shaders: Vec<Box<dyn CustomShader>>,
+
+    /// Shader to use for rendering instead of the one referred by the materials
+    pub override_shader: Option<Shaders>,
 
     /// List of shader enums to bind with materials referring to them.
     shaders: HashMap<Shaders, Vec<usize>>,
@@ -91,6 +95,7 @@ impl Renderer {
             delta: 0.0,
             gui_res: GuiRes::new(fonts),
             custom_shaders: create_shaders(),
+            override_shader: None,
             shaders: HashMap::new(),
             directional_light: Handle::none(),
             point_lights: Vec::new(),
@@ -434,6 +439,7 @@ impl Renderer {
 
         // Need to bind programs one at a time
         for (&shader_id, material_ids) in self.shaders.iter() {
+            let shader_id = self.override_shader.unwrap_or(shader_id);
             let shader = &self.custom_shaders[shader_id as usize];
             shader.bind();
             shader.bind_time(self.delta);
