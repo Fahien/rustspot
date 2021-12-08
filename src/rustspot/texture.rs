@@ -12,10 +12,10 @@ use super::*;
 
 fn to_gl_format(color_type: png::ColorType) -> gl::types::GLenum {
     match color_type {
-        png::ColorType::Grayscale => todo!(),
+        png::ColorType::Grayscale => gl::RED,
         png::ColorType::RGB => gl::RGB,
-        png::ColorType::Indexed => todo!(),
-        png::ColorType::GrayscaleAlpha => todo!(),
+        png::ColorType::Indexed => gl::RGB,
+        png::ColorType::GrayscaleAlpha => gl::RGBA,
         png::ColorType::RGBA => gl::RGBA,
     }
 }

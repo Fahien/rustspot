@@ -471,7 +471,7 @@ impl CustomShader for {}Shader {{
                 gl::DrawElements(
                     gl::TRIANGLES,
                     primitive.indices.len() as _,
-                    gl::UNSIGNED_SHORT,
+                    primitive.index_type,
                     0 as _,
                 );
             }
@@ -492,7 +492,7 @@ impl CustomShader for {}Shader {{
                     gl::DrawElementsInstanced(
                         gl::TRIANGLES,
                         primitive.indices.len() as _,
-                        gl::UNSIGNED_SHORT,
+                        primitive.index_type,
                         0 as _,
                         batch_count as _,
                     );
@@ -519,7 +519,7 @@ impl CustomShader for {}Shader {{
                 gl::DrawElements(
                     gl::TRIANGLES,
                     primitive.indices.len() as _,
-                    gl::UNSIGNED_SHORT,
+                    primitive.index_type,
                     0 as _,
                 );
             }

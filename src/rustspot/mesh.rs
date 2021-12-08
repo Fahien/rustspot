@@ -19,7 +19,7 @@ impl MeshRes {
         Self { vbo, ebo, vao }
     }
 
-    pub fn from(vertices: &[Vertex], indices: &Vec<u16>) -> Self {
+    pub fn from(vertices: &[Vertex], indices: &Vec<u8>) -> Self {
         let mut res = MeshRes::new();
 
         res.vao.bind();
@@ -76,10 +76,56 @@ impl MeshRes {
     }
 }
 
+pub struct PrimitiveBuilder {
+    vertices: Vec<Vertex>,
+    indices: Vec<u8>,
+    index_type: gl::types::GLenum,
+
+    material: Option<Handle<Material>>,
+}
+
+impl PrimitiveBuilder {
+    pub fn new() -> Self {
+        Self {
+            vertices: vec![],
+            indices: vec![],
+            index_type: gl::UNSIGNED_BYTE,
+            material: None,
+        }
+    }
+
+    pub fn vertices(mut self, vertices: Vec<Vertex>) -> Self {
+        self.vertices = vertices;
+        self
+    }
+
+    pub fn indices(mut self, indices: Vec<u8>) -> Self {
+        self.indices = indices;
+        self
+    }
+
+    pub fn index_type(mut self, index_type: gl::types::GLenum) -> Self {
+        self.index_type = index_type;
+        self
+    }
+
+    pub fn material(mut self, material: Option<Handle<Material>>) -> Self {
+        self.material = material;
+        self
+    }
+
+    pub fn build(self) -> Primitive {
+        Primitive::new(self.vertices, self.indices, self.index_type, self.material)
+    }
+}
+
 /// Geometry to be rendered with a given material
 pub struct Primitive {
     pub vertices: Vec<Vertex>,
-    pub indices: Vec<u16>,
+
+    pub indices: Vec<u8>,
+    pub index_type: gl::types::GLenum,
+
     /// None means default material
     pub material: Option<Handle<Material>>,
 
@@ -90,14 +136,24 @@ pub struct Primitive {
 }
 
 impl Primitive {
+    pub fn builder() -> PrimitiveBuilder {
+        PrimitiveBuilder::new()
+    }
+
     /// Creates a new primitive
-    pub fn new(vertices: Vec<Vertex>, indices: Vec<u16>) -> Self {
+    pub fn new(
+        vertices: Vec<Vertex>,
+        indices: Vec<u8>,
+        index_type: gl::types::GLenum,
+        material: Option<Handle<Material>>,
+    ) -> Self {
         let res = MeshRes::from(&vertices, &indices);
 
         Self {
             vertices,
             indices,
-            material: None,
+            index_type,
+            material,
             res,
         }
     }
@@ -127,14 +183,11 @@ impl Primitive {
 
         let indices = vec![0, 1, 2];
 
-        let res = MeshRes::from(&vertices, &indices);
-
-        Self {
-            vertices,
-            indices,
-            material: Some(material),
-            res,
-        }
+        Self::builder()
+            .vertices(vertices)
+            .indices(indices)
+            .material(Some(material))
+            .build()
     }
 
     /// Returns a new primitive quad with side length 1 centered at the origin
@@ -167,14 +220,11 @@ impl Primitive {
         ];
         let indices = vec![0, 1, 2, 2, 3, 0];
 
-        let res = MeshRes::from(&vertices, &indices);
-
-        Self {
-            vertices,
-            indices,
-            material: Some(material),
-            res,
-        }
+        Self::builder()
+            .vertices(vertices)
+            .indices(indices)
+            .material(Some(material))
+            .build()
     }
 
     pub fn cube(material: Handle<Material>) -> Self {
@@ -275,14 +325,11 @@ impl Primitive {
             20, 21, 22, 20, 22, 23, // bottom
         ];
 
-        let res = MeshRes::from(&vertices, &indices);
-
-        Self {
-            vertices,
-            indices,
-            material: Some(material),
-            res,
-        }
+        Self::builder()
+            .vertices(vertices)
+            .indices(indices)
+            .material(Some(material))
+            .build()
     }
 
     /// This function is going to bind only this primitive's VAO. We do not bind the
@@ -296,7 +343,7 @@ impl Primitive {
             gl::DrawElements(
                 gl::TRIANGLES,
                 self.indices.len() as _,
-                gl::UNSIGNED_SHORT,
+                self.index_type,
                 0 as _,
             );
         }

@@ -26,6 +26,17 @@ fn data_type_as_size(data_type: gltf::accessor::DataType) -> usize {
     }
 }
 
+fn data_type_as_gl(data_type: gltf::accessor::DataType) -> gl::types::GLenum {
+    match data_type {
+        gltf::accessor::DataType::I8 => todo!(),
+        gltf::accessor::DataType::U8 => gl::UNSIGNED_BYTE,
+        gltf::accessor::DataType::I16 => todo!(),
+        gltf::accessor::DataType::U16 => gl::UNSIGNED_SHORT,
+        gltf::accessor::DataType::U32 => gl::UNSIGNED_INT,
+        gltf::accessor::DataType::F32 => todo!(),
+    }
+}
+
 fn dimensions_as_size(dimensions: gltf::accessor::Dimensions) -> usize {
     match dimensions {
         gltf::accessor::Dimensions::Scalar => 1,
@@ -344,21 +355,29 @@ impl ModelBuilder {
                 }
 
                 let mut indices = vec![];
+                let mut index_type = gl::UNSIGNED_BYTE;
                 if let Some(accessor) = gprimitive.indices() {
                     let data_type = accessor.data_type();
-                    assert!(data_type == gltf::accessor::DataType::U16);
+                    index_type = data_type_as_gl(data_type);
+
+                    // Data type can vary
                     let data = self.get_data_start(&accessor);
                     let d = &data[0];
-                    let length = accessor.count();
-                    let slice: &[u16] =
+                    let length = accessor.count() * data_type_as_size(data_type);
+                    // Use bytes regardless of the index data type
+                    let slice: &[u8] =
                         unsafe { std::slice::from_raw_parts(d as *const u8 as _, length) };
                     indices = Vec::from(slice);
                 }
 
-                let mut primitive = Primitive::new(vertices, indices);
-                if let Some(material_id) = gprimitive.material().index() {
-                    primitive.material = Some(Handle::new(material_id));
-                }
+                let material = gprimitive.material().index().map(|id| Handle::new(id));
+
+                let primitive = Primitive::builder()
+                    .vertices(vertices)
+                    .indices(indices)
+                    .index_type(index_type)
+                    .material(material)
+                    .build();
                 let primitive_handle = model.primitives.push(primitive);
                 primitive_handles.push(primitive_handle);
             }
