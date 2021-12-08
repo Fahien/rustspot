@@ -83,7 +83,7 @@ fn create_model() -> (Model, Handle<Node>) {
     let mut root = Node::new();
     root.name = String::from("root");
 
-    let camera = model.cameras.push(Camera::perspective());
+    let camera = model.cameras.push(Camera::perspective(480.0, 320.0));
 
     let mut camera_node = Node::new();
     camera_node.name = String::from("camera");

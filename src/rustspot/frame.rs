@@ -172,7 +172,7 @@ pub trait DrawableOnto {
 
 /// New structures
 pub struct DefaultFramebuffer {
-    framebuffer: Framebuffer,
+    pub framebuffer: Framebuffer,
 }
 
 impl DefaultFramebuffer {
@@ -190,7 +190,7 @@ impl DrawableOnto for DefaultFramebuffer {
 }
 
 pub struct CustomFramebuffer {
-    framebuffer: Framebuffer,
+    pub framebuffer: Framebuffer,
     pub color_textures: Vec<Texture>,
     pub depth_texture: Option<Texture>,
 }

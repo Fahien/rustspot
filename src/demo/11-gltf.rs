@@ -23,11 +23,16 @@ fn main() -> Result<(), Box<dyn Error>> {
     let mut terrain = Terrain::new(&mut model);
     terrain.set_scale(&mut model, 64.0);
     create_light(&mut model);
-    let camera = create_camera(&mut model);
+    let (camera, camera_node) = create_camera(&mut model);
 
     let root = Handle::new(0);
 
-    model.nodes.get_mut(root).unwrap().children.push(camera);
+    model
+        .nodes
+        .get_mut(root)
+        .unwrap()
+        .children
+        .push(camera_node);
     //model
     //    .nodes
     //    .get_mut(root)
@@ -40,14 +45,20 @@ fn main() -> Result<(), Box<dyn Error>> {
     'gameloop: loop {
         // Handle SDL2 events
         for event in spot.events.poll_iter() {
+            let extent = spot.gfx.video.get_drawable_extent();
+
+            // Update camera
+            {
+                let camera = model.cameras.get_mut(camera).unwrap();
+                *camera = Camera::perspective(extent.width as f32, extent.height as f32);
+            }
+
             spot.input.handle(&event);
 
             match event {
                 sdl2::event::Event::Quit { .. } => break 'gameloop,
                 sdl2::event::Event::MouseMotion { xrel, yrel, .. } => {
-                    let extent = spot.gfx.video.extent;
-
-                    let node = model.nodes.get_mut(camera).unwrap();
+                    let node = model.nodes.get_mut(camera_node).unwrap();
                     let right = na::Unit::new_normalize(node.trs.get_right());
                     let y_rotation = na::UnitQuaternion::from_axis_angle(
                         &right,
@@ -62,7 +73,7 @@ fn main() -> Result<(), Box<dyn Error>> {
                     node.trs.rotate(&z_rotation);
                 }
                 sdl2::event::Event::MouseWheel { y, .. } => {
-                    let node = model.nodes.get_mut(camera).unwrap();
+                    let node = model.nodes.get_mut(camera_node).unwrap();
                     let forward = node.trs.get_forward().scale(0.125 * y as f32);
                     node.trs.translate(forward.x, forward.y, forward.z);
                 }
@@ -153,8 +164,8 @@ fn create_light(model: &mut Model) {
         .push(light_node);
 }
 
-fn create_camera(model: &mut Model) -> Handle<Node> {
-    let camera = model.cameras.push(Camera::perspective());
+fn create_camera(model: &mut Model) -> (Handle<Camera>, Handle<Node>) {
+    let camera = model.cameras.push(Camera::perspective(480.0, 320.0));
     let mut camera_node = Node::builder()
         .id(model.nodes.len() as u32)
         .name("Camera".to_string())
@@ -166,5 +177,7 @@ fn create_camera(model: &mut Model) -> Handle<Node> {
     //     -(0.2 + std::f32::consts::FRAC_PI_4 + std::f32::consts::FRAC_PI_8),
     // ));
     camera_node.trs.translate(0.0, 0.35, 0.0);
-    model.nodes.push(camera_node)
+    let node = model.nodes.push(camera_node);
+
+    (camera, node)
 }

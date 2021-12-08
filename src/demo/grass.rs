@@ -14,7 +14,7 @@ pub struct Grass {
 
 impl Grass {
     fn create_camera(model: &mut Model) -> Handle<Node> {
-        let camera = model.cameras.push(Camera::perspective());
+        let camera = model.cameras.push(Camera::perspective(480.0, 320.0));
 
         let mut camera_node = Node::new();
         camera_node.name = String::from("camera");

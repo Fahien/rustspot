@@ -92,7 +92,7 @@ pub fn create_structure_scene(model: &mut Model) -> Handle<Node> {
     let light_node = model.nodes.push(light_node);
     root.children.push(light_node);
 
-    let camera = model.cameras.push(Camera::perspective());
+    let camera = model.cameras.push(Camera::perspective(480.0, 320.0));
 
     let mut camera_node = Node::new();
     camera_node.name = String::from("camera");

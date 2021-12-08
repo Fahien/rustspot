@@ -171,9 +171,8 @@ impl Camera {
         }
     }
 
-    pub fn perspective() -> Camera {
-        let (w, h) = (480.0, 320.0);
-        let proj = na::Perspective3::new(w / h, 3.14 / 4.0, 0.1, 100.0);
+    pub fn perspective(width: f32, height: f32) -> Camera {
+        let proj = na::Perspective3::new(width / height, 3.14 / 4.0, 0.1, 100.0);
         Camera {
             proj: proj.to_homogeneous(),
         }
@@ -300,7 +299,6 @@ impl Default for Extent2D {
 }
 
 pub struct Video {
-    pub extent: Extent2D,
     system: sdl2::VideoSubsystem,
     window: sdl2::video::Window,
     pub gl: sdl2::video::GLContext,
@@ -321,6 +319,12 @@ impl Video {
         } else {
             (3, 3)
         }
+    }
+
+    pub fn get_drawable_extent(&self) -> Extent2D {
+        // Default framebuffer drawable size could be different than window size depending on DPI
+        let (width, height) = self.window.drawable_size();
+        Extent2D::new(width, height)
     }
 
     fn new(sdl: &sdl2::Sdl, extent: Extent2D) -> Self {
@@ -355,12 +359,7 @@ impl Video {
 
         gl::load_with(|symbol| system.gl_get_proc_address(symbol) as *const _);
 
-        Self {
-            extent,
-            system,
-            window,
-            gl,
-        }
+        Self { system, window, gl }
     }
 }
 
@@ -403,6 +402,8 @@ impl Gfx {
 
         let mut gui = imgui::Context::create();
         let renderer = Renderer::new(&mut gui.fonts());
+
+        let extent = video.get_drawable_extent();
         let frame = Some(Frame::new(extent, offscreen_extent));
 
         Self {
@@ -420,6 +421,15 @@ impl Gfx {
             gl::GetIntegerv(gl::MINOR_VERSION, &mut minor);
         }
         (major, minor)
+    }
+
+    /// Borrow the frame
+    pub fn get_frame(&self) -> &Frame {
+        self.frame.as_ref().unwrap()
+    }
+
+    pub fn get_frame_mut(&mut self) -> &mut Frame {
+        self.frame.as_mut().unwrap()
     }
 
     pub fn next_frame(&mut self) -> Frame {
