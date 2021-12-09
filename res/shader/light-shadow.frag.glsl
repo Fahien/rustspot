@@ -70,64 +70,65 @@ float calculate_shadow(vec4 pos_light_space) {
 }
 
 void main() {
-    vec3 normal = normalize(normal);
-    vec3 view_vec = normalize(cam_pos - world_pos);
-
-    // Light out towards viewer
-    vec3 Lo = vec3(0.0);
-
-    // TODO for each light
-    vec3 light_vec = normalize(light_direction);
-    vec3 half_vec = normalize(view_vec + light_vec);
-    float NoV = abs(dot(normal, view_vec)) + 1e-5;
-    float NoH = clamp(dot(normal, half_vec), 0.0, 1.0);
-    float NoL = clamp(dot(normal, light_vec), 0.0, 1.0);
-    float HoL = clamp(dot(half_vec, light_vec), 0.0, 1.0);
-
-    // No attenuation for directional light
-    vec3 radiance = 4.0 * light_color;
-
-    vec3 aw = vec3(0.03);
-    vec4 ambient = vec4(aw, 1.0);
     vec4 albedo = texture(tex_sampler, tex_coords);
     // HDR?
     albedo.r = pow(albedo.r, 2.2);
     albedo.g = pow(albedo.g, 2.2);
     albedo.b = pow(albedo.b, 2.2);
     vec3 c = albedo.rgb;
+    
+    vec3 ambient = 0.125 * c;
 
-    // Frenel-shlick
     // TODO parameter?
     float reflectance = 0.5;
+
+    vec3 N = normalize(normal);
+    vec3 V = normalize(cam_pos - world_pos);
+    float NoV = abs(dot(N, V)) + 1e-5;
+
+    // Light out towards viewer
+    vec3 Lo = vec3(0.0);
+
+    // TODO for each light
+    vec3 L = normalize(light_direction);
+    vec3 H = normalize(V + L);
+    float NoH = clamp(dot(N, H), 0.0, 1.0);
+    float NoL = clamp(dot(N, L), 0.0, 1.0);
+    float LoH = clamp(dot(L, H), 0.0, 1.0);
+
+    // No attenuation for directional light
+    vec3 radiance = 8.0 * light_color;
+
+    // Frenel-shlick
     vec3 f0 = 0.16 * reflectance * reflectance * (1.0 - metallic) + c * metallic;
-    vec3 F  = fresnel_schlick(HoL, f0);
+    vec3 F  = fresnel_schlick(LoH, f0);
 
     // Distribution of microfacets
-    float D = distribution_ggx(NoH, normal, half_vec, roughness);
+    float D = distribution_ggx(NoH, N, H, roughness);
 
     // Visibility of microfacets
     float G = geometry_smith_ggx(NoV, NoL, roughness);
 
     // Cook-torrance specular microfacet model
-    vec3 numerator    = (D * G) * F;
-    float denominator = 4.0 * NoV * NoL + 0.0001;
-    vec3 specular     = numerator / denominator;
+    vec3 Fr = (D * G) * F;
 
     // Lambertian diffuse model
     // Pure metallic materials have no subsurface scattering
-    vec3 diffuse = ((1.0 - metallic) * c) / PI;
+    vec3 Fd = ((1.0 - metallic) * c) / PI;
 
     // Lighting!
-    Lo += (diffuse + specular) * radiance * NoL;
+    Lo += (Fd + Fr) * radiance * NoL;
+
+    vec3 color = ambient + Lo;
 
     // Shadow factor
     float shadow = calculate_shadow(pos_light_space);
-
-    out_color = ambient * albedo + shadow * vec4(Lo, 1.0);
+    color = shadow * color;
 
     // HDR? Gamma correction?
-    vec3 color = out_color.rgb / (out_color.rgb + vec3(1.0));
+    color = color / (color + vec3(1.0));
     color = pow(color, vec3(1.0/2.2));
 
     out_color.rgb = color;
+    out_color.a = albedo.a;
 }

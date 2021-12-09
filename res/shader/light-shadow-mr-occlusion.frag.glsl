@@ -12,9 +12,10 @@ in mediump vec3 normal;
 in mediump vec4 pos_light_space;
 
 uniform sampler2D tex_sampler;
+uniform sampler2D shadow_sampler;
+uniform sampler2D occlusion_sampler;
 uniform sampler2D mr_sampler;
 
-uniform sampler2D shadow_sampler;
 
 uniform vec3 light_color;
 uniform vec3 light_direction;
@@ -76,7 +77,7 @@ void main() {
     albedo.b = pow(albedo.b, 2.2);
     vec3 c = albedo.rgb;
 
-    vec3 ambient = 0.125 * c;
+    vec3 ambient = 0.03 * c;
 
     // TODO parameter?
     float reflectance = 0.5;
@@ -84,6 +85,9 @@ void main() {
     float metallic = metallic_roughness.b;
     float dielectric = 1.0 - metallic;
     float roughness = metallic_roughness.g;
+
+    vec4 occlusion_sample = texture(occlusion_sampler, tex_coords);
+    float occlusion = occlusion_sample.r;
 
     vec3 N = normalize(normal);
     vec3 V = normalize(cam_pos - world_pos);
@@ -95,6 +99,7 @@ void main() {
     // TODO for each light
     vec3 L = normalize(light_direction);
     vec3 H = normalize(V + L);
+    float HoV = clamp(dot(H, V), 0.0, 1.0);
     float NoH = clamp(dot(N, H), 0.0, 1.0);
     float NoL = clamp(dot(N, L), 0.0, 1.0);
     float LoH = clamp(dot(L, H), 0.0, 1.0);
@@ -119,10 +124,10 @@ void main() {
     // Pure metallic materials have no subsurface scattering
     vec3 Fd = (dielectric * c) / PI;
 
-    Lo += (Fd + Fr) * radiance * NoL;
+    Lo += (Fd + Fr) * NoL * radiance;
     // TODO end for each light
 
-    vec3 color = ambient + Lo;
+    vec3 color = occlusion * ambient + Lo;
 
     // Shadow factor for unique directional light
     float shadow = calculate_shadow(pos_light_space, NoL);

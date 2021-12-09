@@ -8,6 +8,7 @@ pub struct MaterialBuilder {
     shader: Shaders,
     texture: Option<Handle<Texture>>,
     normals: Option<Handle<Texture>>,
+    occlusion: Option<Handle<Texture>>,
     metallic_roughness: Option<Handle<Texture>>,
 
     metallic: f32,
@@ -20,6 +21,7 @@ impl MaterialBuilder {
             shader: Shaders::DEFAULT,
             texture: None,
             normals: None,
+            occlusion: None,
             metallic_roughness: None,
             metallic: 1.0,
             roughness: 1.0,
@@ -38,6 +40,11 @@ impl MaterialBuilder {
 
     pub fn normals(mut self, normals: Handle<Texture>) -> Self {
         self.normals = Some(normals);
+        self
+    }
+
+    pub fn occlusion(mut self, occlusion: Handle<Texture>) -> Self {
+        self.occlusion = Some(occlusion);
         self
     }
 
@@ -60,6 +67,8 @@ impl MaterialBuilder {
         let mut material = Material::new();
         material.shader = self.shader;
         material.texture = self.texture;
+        material.normals = self.normals;
+        material.occlusion = self.occlusion;
         material.metallic = self.metallic;
         material.roughness = self.roughness;
         material
@@ -71,6 +80,7 @@ pub struct Material {
     pub color: Color,
     pub texture: Option<Handle<Texture>>,
     pub normals: Option<Handle<Texture>>,
+    pub occlusion: Option<Handle<Texture>>,
 
     // PBR factors
     pub metallic_roughness: Option<Handle<Texture>>,
@@ -89,6 +99,7 @@ impl Material {
             color: Color::new(),
             texture: None,
             normals: None,
+            occlusion: None,
             metallic_roughness: None,
             metallic: 1.0,
             roughness: 1.0,

@@ -352,6 +352,13 @@ impl CustomShader for {}Shader {{
     if uniform_strings.contains("normal_sampler") {
         generated_code.push_str("        unsafe { gl::Uniform1i(self.loc.normal_sampler, 2) };\n");
     }
+    if uniform_strings.contains("occlusion_sampler") {
+        generated_code
+            .push_str("        unsafe { gl::Uniform1i(self.loc.occlusion_sampler, 3) };\n");
+    }
+    if uniform_strings.contains("mr_sampler") {
+        generated_code.push_str("        unsafe { gl::Uniform1i(self.loc.mr_sampler, 4) };\n");
+    }
 
     generated_code.push_str("    }\n");
 
@@ -475,6 +482,21 @@ impl CustomShader for {}Shader {{
             }
         }
 "#);
+        // Occlusion sampler
+        if uniform_strings.contains("occlusion_sampler") {
+            generated_code.push_str(
+                r#"
+        // Bind metallic roughness texture
+        if let Some(occlusion_handle) = material.occlusion {
+            unsafe {
+                gl::ActiveTexture(gl::TEXTURE0 + 3);
+                textures.get(occlusion_handle).unwrap().bind();
+                gl::ActiveTexture(gl::TEXTURE0);
+            }
+        }
+"#,
+            );
+        }
 
         if uniform_strings.contains("mr_sampler") {
             generated_code.push_str(
@@ -482,7 +504,7 @@ impl CustomShader for {}Shader {{
         // Bind metallic roughness texture
         if let Some(mr_handle) = material.metallic_roughness {
             unsafe {
-                gl::ActiveTexture(gl::TEXTURE0 + 3);
+                gl::ActiveTexture(gl::TEXTURE0 + 4);
                 textures.get(mr_handle).unwrap().bind();
                 gl::ActiveTexture(gl::TEXTURE0);
             }

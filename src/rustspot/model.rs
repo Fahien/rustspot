@@ -160,7 +160,38 @@ impl ModelBuilder {
         );
     }
 
-    pub fn load_materials(&mut self, model: &mut Model) -> Result<(), Box<dyn Error>> {
+    pub fn load_texture(
+        &self,
+        textures: &Pack<Texture>,
+        texture: &gltf::Texture,
+    ) -> Option<Handle<Texture>> {
+        match texture.source().source() {
+            gltf::image::Source::Uri { uri, .. } => {
+                let uri = self.parent_dir.join(uri);
+
+                // Find texture by path
+                let (texture_id, _) = textures
+                    .iter()
+                    .enumerate()
+                    .find(|(_, texture)| {
+                        texture.path.is_some() && *texture.path.as_ref().unwrap() == uri
+                    })
+                    .unwrap();
+
+                let texture_handle = Handle::new(texture_id);
+
+                return Some(texture_handle);
+            }
+            _ => unimplemented!(),
+        }
+    }
+
+    pub fn load_materials(
+        &mut self,
+        textures: &Pack<Texture>,
+        colors: &mut HashMap<Color, Texture>,
+        materials: &mut Pack<Material>,
+    ) -> Result<(), Box<dyn Error>> {
         let _ = ScopedTimer::new("Materials loaded");
 
         for gmaterial in self.gltf.materials() {
@@ -170,26 +201,7 @@ impl ModelBuilder {
 
             // Load albedo
             if let Some(gtexture) = pbr.base_color_texture() {
-                match gtexture.texture().source().source() {
-                    gltf::image::Source::Uri { uri, .. } => {
-                        let path = self.parent_dir.join(uri);
-
-                        // Find texture by path
-                        let (texture_id, _) = model
-                            .textures
-                            .iter()
-                            .enumerate()
-                            .find(|(_, texture)| {
-                                texture.path.is_some() && *texture.path.as_ref().unwrap() == path
-                            })
-                            .expect(&format!("Failed to find {}", uri));
-
-                        let texture_handle = Handle::new(texture_id);
-
-                        material.texture = Some(texture_handle);
-                    }
-                    _ => unimplemented!(),
-                }
+                material.texture = self.load_texture(textures, &gtexture.texture());
             } else {
                 let gcolor = gmaterial.pbr_metallic_roughness().base_color_factor();
                 let color = Color::rgba(
@@ -199,64 +211,46 @@ impl ModelBuilder {
                     (gcolor[3] * 255.0) as u8,
                 );
                 material.color = color;
-                if !model.colors.contains_key(&color) {
+                if !colors.contains_key(&color) {
                     let texture = Texture::builder().data(color.as_slice()).build()?;
-                    model.colors.insert(color, texture);
+                    colors.insert(color, texture);
                 }
             }
 
             // Load normal map
             if let Some(gtexture) = gmaterial.normal_texture() {
-                match gtexture.texture().source().source() {
-                    gltf::image::Source::Uri { uri, .. } => {
-                        let uri = self.parent_dir.join(uri);
+                // material.normals = self.load_texture(&textures, &gtexture.texture());
+            }
 
-                        // Find texture by path
-                        let (texture_id, _) = model
-                            .textures
-                            .iter()
-                            .enumerate()
-                            .find(|(_, texture)| {
-                                texture.path.is_some() && *texture.path.as_ref().unwrap() == uri
-                            })
-                            .unwrap();
-
-                        let texture_handle = Handle::new(texture_id);
-
-                        material.normals = Some(texture_handle);
-                    }
-                    _ => unimplemented!(),
-                }
+            // Load ambient occlusion texture
+            if let Some(gtexture) = gmaterial.occlusion_texture() {
+                material.occlusion = self.load_texture(&textures, &gtexture.texture());
             }
 
             // Load metallic rougness texture
             if let Some(gtexture) = pbr.metallic_roughness_texture() {
-                match gtexture.texture().source().source() {
-                    gltf::image::Source::Uri { uri, .. } => {
-                        let uri = self.parent_dir.join(uri);
-                        // Find texture by path
-                        let (texture_id, _) = model
-                            .textures
-                            .iter()
-                            .enumerate()
-                            .find(|(_, texture)| {
-                                texture.path.is_some() && *texture.path.as_ref().unwrap() == uri
-                            })
-                            .unwrap();
-
-                        let texture_handle = Handle::new(texture_id);
-
-                        material.metallic_roughness = Some(texture_handle);
-                        material.shader = Shaders::LIGHTSHADOWMR;
-                    }
-                    _ => unimplemented!(),
-                }
+                material.metallic_roughness = self.load_texture(&textures, &gtexture.texture());
             }
+
+            // Determines shader based on textures available
+            material.shader = if let Some(metallic_roughness) = material.metallic_roughness {
+                if let Some(occlusion) = material.occlusion {
+                    if occlusion.id == metallic_roughness.id {
+                        Shaders::LIGHTSHADOWMRO
+                    } else {
+                        Shaders::LIGHTSHADOWMROCCLUSION
+                    }
+                } else {
+                    Shaders::LIGHTSHADOWMR
+                }
+            } else {
+                Shaders::LIGHTSHADOW
+            };
 
             material.metallic = pbr.metallic_factor();
             material.roughness = pbr.roughness_factor();
 
-            model.materials.push(material);
+            materials.push(material);
         }
 
         Ok(())
@@ -267,7 +261,7 @@ impl ModelBuilder {
 
         self.load_uri_buffers()?;
         self.load_textures(&mut model);
-        self.load_materials(&mut model)?;
+        self.load_materials(&model.textures, &mut model.colors, &mut model.materials)?;
         self.load_meshes(&mut model)?;
 
         // Load scene
