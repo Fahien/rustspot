@@ -10,7 +10,9 @@ pub struct Vertex {
     pub position: [f32; 3],
     pub color: [f32; 3],
     pub tex_coords: [f32; 2],
-    pub normal: [f32; 3],
+    pub normal: na::Vector3<f32>,
+    pub tangent: na::Vector3<f32>,
+    pub bitangent: na::Vector3<f32>,
 }
 
 impl Vertex {
@@ -19,7 +21,9 @@ impl Vertex {
             position: [0.0, 0.0, 0.0],
             color: [1.0, 1.0, 1.0],
             tex_coords: [0.0, 0.0],
-            normal: [0.0, 0.0, 1.0],
+            normal: na::Vector3::z(),
+            tangent: na::Vector3::zeros(),
+            bitangent: na::Vector3::zeros()
         }
     }
 }

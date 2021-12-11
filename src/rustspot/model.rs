@@ -219,7 +219,7 @@ impl ModelBuilder {
 
             // Load normal map
             if let Some(gtexture) = gmaterial.normal_texture() {
-                // material.normals = self.load_texture(&textures, &gtexture.texture());
+                material.normals = self.load_texture(&textures, &gtexture.texture());
             }
 
             // Load ambient occlusion texture
@@ -333,16 +333,23 @@ impl ModelBuilder {
                 let mode = gprimitive.mode();
                 assert!(mode == gltf::mesh::Mode::Triangles);
 
+                // Load normals first, so we can process tangents later
+                for (semantic, accessor) in gprimitive.attributes() {
+                    if semantic == gltf::mesh::Semantic::Normals {
+                        self.load_normals(&mut vertices, &accessor)?;
+                    }
+                }
+
                 for (semantic, accessor) in gprimitive.attributes() {
                     match semantic {
                         gltf::mesh::Semantic::Positions => {
                             self.load_positions(&mut vertices, &accessor)?
                         }
-                        gltf::mesh::Semantic::Normals => {
-                            self.load_normals(&mut vertices, &accessor)?
-                        }
                         gltf::mesh::Semantic::TexCoords(_) => {
                             self.load_tex_coords(&mut vertices, &accessor)?
+                        }
+                        gltf::mesh::Semantic::Tangents => {
+                            self.load_tangents(&mut vertices, &accessor)?
                         }
                         _ => println!("Semantic not implemented {:?}", semantic),
                     }
@@ -444,7 +451,9 @@ impl ModelBuilder {
             if vertices.len() <= i {
                 vertices.push(Vertex::new())
             }
-            vertices[i].normal = normal.try_into()?;
+            vertices[i].normal[0] = normal[0];
+            vertices[i].normal[1] = normal[1];
+            vertices[i].normal[2] = normal[2];
         }
 
         Ok(())
@@ -478,6 +487,44 @@ impl ModelBuilder {
                 vertices.push(Vertex::new())
             }
             vertices[i].tex_coords = tex_coords.try_into()?;
+        }
+
+        Ok(())
+    }
+
+    fn load_tangents(
+        &self,
+        vertices: &mut Vec<Vertex>,
+        accessor: &gltf::Accessor,
+    ) -> Result<(), Box<dyn Error>> {
+        let data_type = accessor.data_type();
+        assert!(data_type == gltf::accessor::DataType::F32);
+        let count = accessor.count();
+        let dimensions = accessor.dimensions();
+        assert!(dimensions == gltf::accessor::Dimensions::Vec4);
+
+        let view = accessor.view().unwrap();
+        let target = view.target().unwrap_or(gltf::buffer::Target::ArrayBuffer);
+        assert!(target == gltf::buffer::Target::ArrayBuffer);
+
+        let data = self.get_data_start(accessor);
+        let stride = get_stride(accessor);
+
+        for i in 0..count {
+            let offset = i * stride;
+            assert!(offset < data.len());
+            let d = &data[offset];
+            let tangent = unsafe { std::slice::from_raw_parts::<f32>(d as *const u8 as _, 4) };
+
+            if vertices.len() <= i {
+                vertices.push(Vertex::new())
+            }
+            vertices[i].tangent[0] = tangent[0];
+            vertices[i].tangent[1] = tangent[1];
+            vertices[i].tangent[2] = tangent[2];
+
+            // Compute bitangent as for glTF 2.0 spec
+            vertices[i].bitangent = vertices[i].normal.cross(&vertices[i].tangent) * tangent[3];
         }
 
         Ok(())
