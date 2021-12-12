@@ -1,232 +1,13 @@
-// build.rs
-
 use std::collections::HashSet;
 use std::error::Error;
-use std::fs::{self, ReadDir};
-use std::path::Path;
+use std::ops::Range;
 
 use glsl::parser::Parse;
 use glsl::syntax::{Declaration, ExternalDeclaration};
 
-const VERT_SUFFIX: &str = "vert.glsl";
-const FRAG_SUFFIX: &str = "frag.glsl";
+use super::*;
 
-const HEADER: &str = r#"// Generated code, do not modify.
-use crate::*;
-
-use std::path::Path;
-use std::fs::File;
-use std::io::Read;
-use std::any::Any;
-use std::collections::HashMap;
-use std::fmt;
-
-use nalgebra as na;
-
-"#;
-
-fn get_shader_prefixes(dir: ReadDir) -> Vec<String> {
-    let mut shader_prefixes = vec![];
-    for shader_name in dir
-        .filter_map(|e| e.ok())
-        .filter_map(|e| Some(e.file_name().to_string_lossy().to_string()))
-        .filter(|e| e.ends_with(VERT_SUFFIX))
-    {
-        let shader_prefix_len = shader_name.len() - VERT_SUFFIX.len();
-        let shader_prefix = &shader_name[0..shader_prefix_len];
-        shader_prefixes.push(shader_prefix.to_string());
-    }
-    shader_prefixes
-}
-
-fn main() -> Result<(), Box<dyn Error>> {
-    let mut code = String::from(HEADER);
-
-    let shaders_path = Path::new("res/shader");
-    let shaders_dir = std::fs::read_dir(shaders_path)?;
-    let shader_prefixes = get_shader_prefixes(shaders_dir);
-
-    code.push_str(&generate_enum(&shader_prefixes)?);
-    code.push_str(&generate_create_shaders(&shader_prefixes)?);
-
-    for shader_prefix in &shader_prefixes {
-        code.push_str(&generate(shaders_path, shader_prefix)?);
-    }
-
-    let dest_path = Path::new("src/rustspot/shaders.rs");
-    fs::write(dest_path, code)?;
-
-    println!("cargo:rerun-if-changed=res/shader");
-    println!("cargo:rerun-if-changed=build.rs");
-    Ok(())
-}
-
-fn _generate_path(shaders_path: &Path, shader_prefix: &str) -> Result<String, Box<dyn Error>> {
-    let vs_path = shaders_path.join(shader_prefix).join(VERT_SUFFIX);
-    Ok(std::format!("{}\n", vs_path.to_str().unwrap()))
-}
-
-fn to_camelcase(name: &str) -> String {
-    let (symbol_indices, _): (Vec<usize>, Vec<char>) = name
-        .chars()
-        .enumerate()
-        .filter(|(_, c)| *c == '-' || *c == '_')
-        .unzip();
-
-    let mut name = name.to_string();
-    name.replace_range(0..1, &name[0..1].to_uppercase());
-
-    for i in symbol_indices {
-        if i < name.len() - 1 {
-            let char = name.chars().nth(i + 1).unwrap().to_uppercase().to_string();
-            name.replace_range(i + 1..i + 2, &char);
-        }
-    }
-
-    let name = name.chars().filter(|&c| c != '_' && c != '-').collect();
-
-    name
-}
-
-fn generate_enum(shader_prefixes: &Vec<String>) -> Result<String, Box<dyn Error>> {
-    let mut code =
-        String::from("#[derive(Hash, Eq, PartialEq, Copy, Clone)]\npub enum Shaders {\n");
-
-    for shader_prefix in shader_prefixes {
-        let shader_camel = to_camelcase(shader_prefix);
-        code.push_str(&std::format!("    {},\n", shader_camel.to_uppercase(),));
-    }
-
-    code.push_str("}\n\n");
-
-    // Display enum
-    code.push_str(
-        r#"
-impl fmt::Display for Shaders {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.as_str())
-    }
-}
-"#,
-    );
-
-    // Next method for Shader enum
-    code.push_str(
-        r#"
-impl Shaders {
-    /// Get next shader in the enum
-    pub fn next(&self) -> Option<Self> {
-        match self {
-"#,
-    );
-
-    for i in 0..shader_prefixes.len() {
-        let shader_prefix = &shader_prefixes[i];
-        let shader_camel = to_camelcase(shader_prefix);
-        let shader_upper = shader_camel.to_uppercase();
-
-        let next_upper = if i + 1 < shader_prefixes.len() {
-            let next_index = (i + 1) % shader_prefixes.len();
-            let next_shader = &shader_prefixes[next_index];
-            format!("Some(Self::{})", to_camelcase(next_shader).to_uppercase())
-        } else {
-            "None".to_string()
-        };
-
-        code.push_str(&std::format!(
-            "            Self::{} => {},\n",
-            shader_upper,
-            next_upper
-        ));
-    }
-
-    code.push_str(
-        r#"        }
-    }
-"#,
-    );
-
-    code.push_str(
-        r#"
-    /// Get previous shader in the enum
-    pub fn prev(&self) -> Option<Self> {
-        match self {
-"#,
-    );
-
-    for i in 0..shader_prefixes.len() {
-        let prev_upper = if i > 0 {
-            let shader_prefix = &shader_prefixes[i - 1];
-            let shader_camel = to_camelcase(shader_prefix);
-            format!("Some(Self::{})", shader_camel.to_uppercase())
-        } else {
-            "None".to_string()
-        };
-
-        let shader_prefix = &shader_prefixes[i];
-        let shader_upper = to_camelcase(shader_prefix).to_uppercase();
-
-        code.push_str(&std::format!(
-            "            Self::{} => {},\n",
-            shader_upper,
-            prev_upper
-        ));
-    }
-
-    code.push_str(
-        r#"        }
-    }
-"#,
-    );
-
-    // As string slice
-    code.push_str(
-        r#"
-    pub fn as_str(&self) -> &str {
-        match self {
-"#,
-    );
-
-    for shader_prefix in shader_prefixes {
-        let shader_camel = to_camelcase(shader_prefix);
-        let shader_upper = shader_camel.to_uppercase();
-        code.push_str(&std::format!(
-            "            Self::{} => \"{}\",\n",
-            shader_upper,
-            shader_camel
-        ));
-    }
-
-    code.push_str(
-        r#"        }
-    }
-"#,
-    );
-
-    // End enum impl
-    code.push_str("}\n\n");
-
-    Ok(code)
-}
-
-fn generate_create_shaders(shader_prefixes: &Vec<String>) -> Result<String, Box<dyn Error>> {
-    let mut code =
-        String::from("pub fn create_shaders() -> Vec<Box<dyn CustomShader>> {\n    vec![\n");
-
-    for shader_prefix in shader_prefixes {
-        let shader_camel = to_camelcase(shader_prefix);
-        code.push_str(&std::format!(
-            "        Box::new({}Shader::new()),\n",
-            shader_camel
-        ));
-    }
-
-    code.push_str("    ]\n}\n");
-
-    Ok(code)
-}
-
-fn get_uniforms(code: &String) -> Vec<String> {
+fn get_uniforms(code: &str) -> Vec<String> {
     let mut uniform_strings = vec![];
     let unit = glsl::syntax::ShaderStage::parse(&code).unwrap();
 
@@ -248,23 +29,183 @@ fn get_uniforms(code: &String) -> Vec<String> {
     uniform_strings
 }
 
-fn generate(shaders_path: &Path, shader_prefix: &str) -> Result<String, Box<dyn Error>> {
-    let vs_path = shaders_path.join(std::format!("{}{}", shader_prefix, VERT_SUFFIX));
-    let fs_path = shaders_path.join(std::format!("{}{}", shader_prefix, FRAG_SUFFIX));
+/// Returns a set with the name of the uniforms of both vertex and fragment shader
+fn get_all_uniforms(code: &ShaderCode) -> HashSet<String> {
+    let mut uniforms: HashSet<String> = HashSet::new();
+    uniforms.extend(get_uniforms(&code.vert));
+    uniforms.extend(get_uniforms(&code.frag));
+    uniforms
+}
 
-    let vs_path_string = vs_path.to_string_lossy().to_string().replace("\\", "/");
-    let fs_path_string = fs_path.to_string_lossy().to_string().replace("\\", "/");
+pub fn generate(info: &ShaderInfo) -> Result<String, Box<dyn Error>> {
+    let mut generated_code = String::new();
 
-    let vs_code = std::fs::read_to_string(&vs_path)?;
-    let fs_code = std::fs::read_to_string(&fs_path)?;
+    for include in &info.includes {
+        // Create enums for the includes
+        generated_code.push_str(&format!(
+            r#"
+#[derive(Copy, Clone, PartialEq, Eq)]
+pub enum {0}{1}Variant {{
+"#,
+            info.camelcase, include.camelcase
+        ));
 
-    let mut uniform_strings: HashSet<String> = HashSet::new();
-    uniform_strings.extend(get_uniforms(&vs_code));
-    uniform_strings.extend(get_uniforms(&fs_code));
+        for variant in &include.variants {
+            generated_code.push_str(&format!("    {},\n", variant.name));
+        }
 
-    let shader_camel = to_camelcase(shader_prefix);
+        generated_code.push_str("}\n");
 
-    let mut generated_code = std::format!("\npub struct {}Loc {{\n", shader_camel);
+        generated_code.push_str(&format!(
+            r#"
+impl {0}{1}Variant {{
+    pub fn all() -> Vec<{0}{1}Variant> {{
+        vec![
+"#,
+            info.camelcase, include.camelcase
+        ));
+
+        for variant in &include.variants {
+            generated_code.push_str(&format!(
+                "            {}{}Variant::{},\n",
+                info.camelcase, include.camelcase, variant.name
+            ));
+        }
+
+        generated_code.push_str(
+            r#"        ]
+    }
+"#,
+        );
+
+        // As string slice
+        generated_code.push_str(
+            r#"
+    pub fn as_str(&self) -> &str {
+        match self {
+"#,
+        );
+
+        for variant in &include.variants {
+            generated_code.push_str(&format!(
+                "            {0}{1}Variant::{2} => \"{2}\",\n",
+                info.camelcase, include.camelcase, variant.name
+            ));
+        }
+
+        generated_code.push_str(
+            r#"        }
+    }
+"#,
+        );
+
+        generated_code.push_str("}\n");
+    }
+
+    for variant in &info.variants {
+        let variant_code = generate_variant(info, variant)?;
+        generated_code.push_str(&variant_code);
+    }
+
+    // More than one variants means we need to create a
+    // parent shader with a multidimensional array of variants
+    if info.variants.len() > 1 {
+        let parent_code = generate_parent(info)?;
+        generated_code.push_str(&parent_code);
+    }
+
+    Ok(generated_code)
+}
+
+fn generate_array(
+    generated_code: &mut String,
+    variant_index: &mut usize,
+    info: &ShaderInfo,
+    include: &Include,
+    next_includes: &[Include],
+    indent: String,
+) {
+    generated_code.push_str(&format!("{}[\n", indent));
+
+    if next_includes.is_empty() {
+        for _ in &include.variants {
+            generated_code.push_str(&format!(
+                "        {}Shaders::{},\n",
+                indent, info.variants[*variant_index].camelcase
+            ));
+            *variant_index += 1;
+        }
+    } else {
+        for _ in &include.variants {
+            generate_array(
+                generated_code,
+                variant_index,
+                info,
+                &next_includes[0],
+                &next_includes[1..],
+                format!("{}    ", indent),
+            );
+        }
+    }
+
+    generated_code.push_str(&format!("{}],\n", indent));
+}
+
+fn generate_parent(info: &ShaderInfo) -> Result<String, Box<dyn Error>> {
+    let mut generated_code = String::new();
+
+    generated_code.push_str(&format!(
+        "\npub const {}_VARIANTS: ",
+        info.prefix.to_uppercase()
+    ));
+
+    // Define multidimensional array
+    for _ in &info.includes {
+        generated_code.push_str("[");
+    }
+    generated_code.push_str("Shaders");
+    for include in &info.includes {
+        generated_code.push_str(&format!(";{}]", include.variants.len()));
+    }
+    generated_code.push_str(" = ");
+
+    // Populate multidimensional array
+    let mut variant_index = 0;
+    // TODO fix indentation probably
+    generate_array(
+        &mut generated_code,
+        &mut variant_index,
+        &info,
+        &info.includes[0],
+        &info.includes[1..],
+        "".to_string(),
+    );
+
+    generated_code.replace_range(generated_code.len() - 2.., ";");
+
+    generated_code.push_str("\n");
+
+    Ok(generated_code)
+}
+
+fn generate_variant(info: &ShaderInfo, variant: &VariantInfo) -> Result<String, Box<dyn Error>> {
+    let mut generated_code = String::new();
+
+    let vs_path_string = variant
+        .get_gen_path(&info.dir, util::VERT_SUFFIX)
+        .to_string_lossy()
+        .to_string()
+        .replace("\\", "/");
+    let fs_path_string = variant
+        .get_gen_path(&info.dir, util::FRAG_SUFFIX)
+        .to_string_lossy()
+        .to_string()
+        .replace("\\", "/");
+
+    // These are useful to create the location structure code
+    let uniform_strings = get_all_uniforms(&variant.code);
+
+    generated_code.push_str(&format!("\npub struct {}Loc {{\n", variant.camelcase));
 
     for uniform in &uniform_strings {
         generated_code.push_str(&std::format!("    pub {}: i32,\n", uniform));
@@ -282,7 +223,7 @@ impl {0}Loc {{
     pub fn new(program: &ShaderProgram) -> Self {{
         {0}Loc {{
 "#,
-        shader_camel
+        variant.camelcase
     ));
 
     for uniform in &uniform_strings {
@@ -300,24 +241,12 @@ impl {0}Loc {{
 
 impl {}Shader {{
     pub fn new() -> Self {{
-        let vert_path = Path::new("{1}");
-        let frag_path = Path::new("{2}");
+        let vert_src = include_bytes!("../../{1}");
+        let frag_src = include_bytes!("../../{2}");
 
-        let mut vert_src = Vec::<u8>::new();
-        let mut frag_src = Vec::<u8>::new();
-
-        File::open(vert_path)
-            .expect("Failed to open vertex file")
-            .read_to_end(&mut vert_src)
-            .expect("Failed reading vertex file");
-        File::open(frag_path)
-            .expect("Failed to open fragment file")
-            .read_to_end(&mut frag_src)
-            .expect("Failed reading fragment file");
-
-        let vs = Shader::new(gl::VERTEX_SHADER, &vert_src)
+        let vs = Shader::new(gl::VERTEX_SHADER, vert_src)
             .expect("Failed to create shader from {1}");
-        let fs = Shader::new(gl::FRAGMENT_SHADER, &frag_src)
+        let fs = Shader::new(gl::FRAGMENT_SHADER, frag_src)
             .expect("Failed to create shader from {2}");
         let program = ShaderProgram::new(vs, fs);
         let loc = {0}Loc::new(&program);
@@ -326,7 +255,7 @@ impl {}Shader {{
         }}
     }}
 "#,
-        shader_camel,
+        variant.camelcase,
         vs_path_string,
         fs_path_string
     ));
@@ -342,7 +271,7 @@ impl CustomShader for {}Shader {{
     fn bind(&self) {{
         self.program.enable();
 "#,
-        shader_camel
+        variant.camelcase
     ));
 
     // Associate texture units and samplers

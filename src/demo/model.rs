@@ -111,7 +111,7 @@ pub fn create_structure_scene(model: &mut Model) -> Handle<Node> {
         .push(Texture::pixel(Color::rgba(160, 170, 180, 255)));
     let material = Material::builder()
         .texture(texture)
-        .shader(Shaders::LIGHTSHADOW)
+        .shader(Shaders::LightShadow)
         .build();
     let material = model.materials.push(material);
     let primitives = vec![model.primitives.push(Primitive::cube(material))];
@@ -130,7 +130,7 @@ pub fn create_structure_scene(model: &mut Model) -> Handle<Node> {
         .push(Texture::pixel(Color::rgba(255, 255, 255, 255)));
     let material = Material::builder()
         .texture(texture)
-        .shader(Shaders::LIGHTSHADOW)
+        .shader(Shaders::LightShadow)
         .build();
     let material = model.materials.push(material);
     let primitives = vec![model.primitives.push(Primitive::cube(material))];

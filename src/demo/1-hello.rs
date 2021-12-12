@@ -77,14 +77,14 @@ fn create_model() -> (Model, Handle<Node>) {
     let material = model.materials.push(
         Material::builder()
             .texture(texture)
-            .shader(Shaders::UNLIT)
+            .shader(Shaders::Unlit)
             .build(),
     );
 
     // Create a fancy material
     let fancy_material = Material::builder()
         .texture(texture)
-        .shader(Shaders::FANCY)
+        .shader(Shaders::Default)
         .build();
     let fancy_material = model.materials.push(fancy_material);
 

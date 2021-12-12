@@ -104,7 +104,7 @@ fn create_model() -> (Model, Handle<Node>) {
             model.materials.push(
                 Material::builder()
                     .texture(texture)
-                    .shader(Shaders::UNLIT)
+                    .shader(Shaders::Unlit)
                     .build(),
             ),
         );

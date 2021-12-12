@@ -195,9 +195,12 @@ impl ModelBuilder {
         let _ = ScopedTimer::new("Materials loaded");
 
         for gmaterial in self.gltf.materials() {
-            let mut material = Material::builder().shader(Shaders::LIGHTSHADOW).build();
+            let mut material = Material::builder().shader(Shaders::LightShadow).build();
 
             let pbr = gmaterial.pbr_metallic_roughness();
+
+            let mut occlusion_variant = PbrOcclusionVariant::Default;
+            let mut metallic_roughness_variant = PbrMetallicRoughnessVariant::Default;
 
             // Load albedo
             if let Some(gtexture) = pbr.base_color_texture() {
@@ -225,27 +228,18 @@ impl ModelBuilder {
             // Load ambient occlusion texture
             if let Some(gtexture) = gmaterial.occlusion_texture() {
                 material.occlusion = self.load_texture(&textures, &gtexture.texture());
+                occlusion_variant = PbrOcclusionVariant::Texture;
             }
 
             // Load metallic rougness texture
             if let Some(gtexture) = pbr.metallic_roughness_texture() {
                 material.metallic_roughness = self.load_texture(&textures, &gtexture.texture());
+                metallic_roughness_variant = PbrMetallicRoughnessVariant::Texture;
             }
 
             // Determines shader based on textures available
-            material.shader = if let Some(metallic_roughness) = material.metallic_roughness {
-                if let Some(occlusion) = material.occlusion {
-                    if occlusion.id == metallic_roughness.id {
-                        Shaders::LIGHTSHADOWMRO
-                    } else {
-                        Shaders::LIGHTSHADOWMROCCLUSION
-                    }
-                } else {
-                    Shaders::LIGHTSHADOWMR
-                }
-            } else {
-                Shaders::LIGHTSHADOW
-            };
+            material.shader =
+                PBR_VARIANTS[occlusion_variant as usize][metallic_roughness_variant as usize][PbrShadowVariant::Texture as usize];
 
             material.metallic = pbr.metallic_factor();
             material.roughness = pbr.roughness_factor();
