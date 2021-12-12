@@ -65,7 +65,7 @@ impl Terrain {
             .textures
             .push(Texture::builder().data(color.as_slice()).build().unwrap());
         let mut material = Material::builder().metallic(0.0).texture(texture).build();
-        material.shader = Shaders::LIGHTSHADOWGRASS;
+        material.shader = Shaders::LightShadowGrass;
 
         let material = model.materials.push(material);
         let primitive = Primitive::triangle(material);
@@ -88,7 +88,7 @@ impl Terrain {
             .push(Texture::builder().data(color.as_slice()).build().unwrap());
         let material = Material::builder()
             .metallic(0.0)
-            .shader(Shaders::LIGHTSHADOW)
+            .shader(Shaders::LightShadow)
             .texture(texture)
             .build();
 

@@ -18,7 +18,7 @@ pub struct MaterialBuilder {
 impl MaterialBuilder {
     pub fn new() -> Self {
         Self {
-            shader: Shaders::DEFAULT,
+            shader: Shaders::Default,
             texture: None,
             normals: None,
             occlusion: None,
@@ -95,7 +95,7 @@ impl Material {
 
     pub fn new() -> Self {
         Self {
-            shader: Shaders::DEFAULT,
+            shader: Shaders::Default,
             color: Color::new(),
             texture: None,
             normals: None,

@@ -85,7 +85,7 @@ fn main() -> Result<(), Box<dyn Error>> {
                         if let Some(override_shader) = spot.gfx.renderer.override_shader {
                             override_shader.next()
                         } else {
-                            Some(Shaders::DEFAULT)
+                            Some(Shaders::first())
                         };
                 }
                 sdl2::event::Event::KeyDown {
@@ -96,7 +96,7 @@ fn main() -> Result<(), Box<dyn Error>> {
                         if let Some(override_shader) = spot.gfx.renderer.override_shader {
                             override_shader.prev()
                         } else {
-                            Some(Shaders::UNLIT)
+                            Some(Shaders::last())
                         };
                 }
                 _ => println!("{:?}", event),

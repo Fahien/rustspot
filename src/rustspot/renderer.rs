@@ -228,7 +228,7 @@ impl Renderer {
         }
 
         // Draw only depth
-        let draw_shadow_program = &self.custom_shaders[Shaders::DEPTH as usize];
+        let draw_shadow_program = &self.custom_shaders[Shaders::Depth as usize];
         draw_shadow_program.bind();
 
         if let Some(light_node) = model.nodes.get(self.directional_light) {
@@ -488,7 +488,7 @@ impl Renderer {
         }
 
         if self.sky.enabled {
-            let sky_shader = self.custom_shaders[Shaders::SKY as usize]
+            let sky_shader = self.custom_shaders[Shaders::Sky as usize]
                 .as_any()
                 .downcast_ref()
                 .unwrap();

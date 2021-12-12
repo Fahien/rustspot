@@ -70,7 +70,7 @@ fn create_model() -> (Model, Handle<Node>) {
     let material = model.materials.push(
         Material::builder()
             .texture(texture)
-            .shader(Shaders::UNLIT)
+            .shader(Shaders::Unlit)
             .build(),
     );
 

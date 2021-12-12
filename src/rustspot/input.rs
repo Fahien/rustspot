@@ -38,6 +38,7 @@ impl Input {
         }
     }
 
+    #[allow(unused_variables)]
     pub fn handle(&mut self, event: &Event) {
         match event {
             Event::Quit { timestamp } => (),
