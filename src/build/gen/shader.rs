@@ -401,7 +401,12 @@ impl CustomShader for {}Shader {{
         } else {
             colors.get(&material.color).unwrap().bind();
         }
+"#);
 
+        // Normal sampler
+        if uniform_strings.contains("normal_sampler") {
+            generated_code.push_str(
+                r#"
         // Bind normal map
         if let Some(normals_handle) = material.normals {
             unsafe {
@@ -410,7 +415,9 @@ impl CustomShader for {}Shader {{
                 gl::ActiveTexture(gl::TEXTURE0);
             }
         }
-"#);
+"#,
+            );
+        }
         // Occlusion sampler
         if uniform_strings.contains("occlusion_sampler") {
             generated_code.push_str(

@@ -201,6 +201,7 @@ impl ModelBuilder {
 
             let mut occlusion_variant = PbrOcclusionVariant::Default;
             let mut metallic_roughness_variant = PbrMetallicRoughnessVariant::Default;
+            let mut normal_variant = PbrNormalVariant::Default;
 
             // Load albedo
             if let Some(gtexture) = pbr.base_color_texture() {
@@ -223,6 +224,7 @@ impl ModelBuilder {
             // Load normal map
             if let Some(gtexture) = gmaterial.normal_texture() {
                 material.normals = self.load_texture(&textures, &gtexture.texture());
+                normal_variant = PbrNormalVariant::Texture;
             }
 
             // Load ambient occlusion texture
@@ -239,7 +241,7 @@ impl ModelBuilder {
 
             // Determines shader based on textures available
             material.shader =
-                PBR_VARIANTS[occlusion_variant as usize][metallic_roughness_variant as usize][PbrShadowVariant::Texture as usize];
+                PBR_VARIANTS[occlusion_variant as usize][metallic_roughness_variant as usize][normal_variant as usize][PbrShadowVariant::Texture as usize];
 
             material.metallic = pbr.metallic_factor();
             material.roughness = pbr.roughness_factor();

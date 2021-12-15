@@ -9,12 +9,16 @@ in mediump vec3 world_pos;
 in mediump vec3 color;
 in mediump vec2 tex_coords;
 in mediump vec3 normal;
+in mediump vec3 tangent;
+in mediump vec3 bitangent;
 in mediump vec4 pos_light_space;
 
 uniform sampler2D tex_sampler;
 
 #include "occlusion.glsl"
 #include "metallic-roughness.glsl"
+#include "normal.glsl"
+
 #include "shadow.glsl"
 
 uniform vec3 light_color;
@@ -70,7 +74,8 @@ void main() {
 
     vec3 ambient = 0.125 * occlusion * c;
 
-    vec3 N = normalize(normal);
+    vec3 N = get_normal(tangent, bitangent, normal, tex_coords);
+
     vec3 V = normalize(cam_pos - world_pos);
     float NoV = abs(dot(N, V)) + 1e-5;
 
@@ -89,7 +94,7 @@ void main() {
 
     // Frenel-Schlick
     vec3 f0 = vec3(0.16 * reflectance * reflectance * (1.0 - metallic)) + c * metallic;
-    vec3 F = fresnel_schlick(LoH, f0);
+    vec3 F = fresnel_schlick(NoH, f0);
 
     // Distribution of microfacets
     float D = distribution_ggx(NoH, N, H, roughness);
