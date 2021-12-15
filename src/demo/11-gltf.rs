@@ -20,6 +20,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     // Load gltf
     let file_path = matches.value_of("file").unwrap();
     let mut model = Model::builder(file_path)?.build()?;
+    let gltf_node = Handle::new(1);
     let mut terrain = Terrain::new(&mut model);
     terrain.set_scale(&mut model, 64.0);
     create_light(&mut model);
@@ -42,7 +43,14 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     spot.gfx.renderer.sky.enabled = true;
 
+    let mut override_shader = spot.gfx.renderer.override_shader.clone();
+    let mut occlusion_variant = PbrOcclusionVariant::Default;
+    let mut metallic_roughness_variant = PbrMetallicRoughnessVariant::Default;
+    let mut shadow_variant = PbrShadowVariant::Texture;
+
     'gameloop: loop {
+        spot.gfx.renderer.override_shader = override_shader.clone();
+
         // Handle SDL2 events
         for event in spot.events.poll_iter() {
             let extent = spot.gfx.video.get_drawable_extent();
@@ -57,20 +65,27 @@ fn main() -> Result<(), Box<dyn Error>> {
 
             match event {
                 sdl2::event::Event::Quit { .. } => break 'gameloop,
-                sdl2::event::Event::MouseMotion { xrel, yrel, .. } => {
-                    let node = model.nodes.get_mut(camera_node).unwrap();
-                    let right = na::Unit::new_normalize(node.trs.get_right());
-                    let y_rotation = na::UnitQuaternion::from_axis_angle(
-                        &right,
-                        4.0 * yrel as f32 / extent.height as f32,
-                    );
-                    node.trs.rotate(&y_rotation);
+                sdl2::event::Event::MouseMotion {
+                    xrel,
+                    yrel,
+                    mousestate,
+                    ..
+                } => {
+                    if mousestate.is_mouse_button_pressed(sdl2::mouse::MouseButton::Left) {
+                        let node = model.nodes.get_mut(gltf_node).unwrap();
+                        let right = na::Unit::new_normalize(node.trs.get_right());
+                        let y_rotation = na::UnitQuaternion::from_axis_angle(
+                            &right,
+                            4.0 * yrel as f32 / extent.height as f32,
+                        );
+                        node.trs.rotate(&y_rotation);
 
-                    let z_rotation = na::UnitQuaternion::from_axis_angle(
-                        &na::Vector3::y_axis(),
-                        4.0 * -xrel as f32 / extent.width as f32,
-                    );
-                    node.trs.rotate(&z_rotation);
+                        let z_rotation = na::UnitQuaternion::from_axis_angle(
+                            &na::Vector3::y_axis(),
+                            4.0 * xrel as f32 / extent.width as f32,
+                        );
+                        node.trs.rotate(&z_rotation);
+                    }
                 }
                 sdl2::event::Event::MouseWheel { y, .. } => {
                     let node = model.nodes.get_mut(camera_node).unwrap();
@@ -129,7 +144,6 @@ fn main() -> Result<(), Box<dyn Error>> {
 
         // Render GUI
         let ui = spot.gfx.gui.frame();
-        let override_shader = spot.gfx.renderer.override_shader.clone();
 
         // Draw gui here before drawing it
         imgui::Window::new(imgui::im_str!("RustSpot"))
@@ -145,7 +159,55 @@ fn main() -> Result<(), Box<dyn Error>> {
                 } else {
                     "None"
                 };
-                ui.text(format!("Shader: {}", shader));
+                ui.text(format!("Shader variant: {}", shader));
+
+                ui.separator();
+
+                let option = "Occlusion";
+                ui.text(option);
+                let mut selected_variant = occlusion_variant;
+                for variant in PbrOcclusionVariant::all() {
+                    if ui.radio_button(
+                        &imgui::im_str!("{}::{}", option, variant.as_str()),
+                        &mut selected_variant,
+                        variant,
+                    ) {
+                        occlusion_variant = selected_variant;
+                    }
+                }
+
+                ui.separator();
+                let option = "MetallicRoughness";
+                ui.text(option);
+                let mut selected_variant = metallic_roughness_variant;
+                for variant in PbrMetallicRoughnessVariant::all() {
+                    if ui.radio_button(
+                        &imgui::im_str!("{}::{}", option, variant.as_str()),
+                        &mut selected_variant,
+                        variant,
+                    ) {
+                        metallic_roughness_variant = selected_variant;
+                    }
+                }
+
+                ui.separator();
+                let option = "Shadow";
+                ui.text(option);
+                let mut selected_variant = shadow_variant;
+                for variant in PbrShadowVariant::all() {
+                    if ui.radio_button(
+                        &imgui::im_str!("{}::{}", option, variant.as_str()),
+                        &mut selected_variant,
+                        variant,
+                    ) {
+                        shadow_variant = selected_variant;
+                    }
+                }
+
+                override_shader.replace(
+                    PBR_VARIANTS[occlusion_variant as usize][metallic_roughness_variant as usize]
+                        [shadow_variant as usize],
+                );
             });
 
         spot.gfx.renderer.render_gui(ui, &frame.default_framebuffer);
