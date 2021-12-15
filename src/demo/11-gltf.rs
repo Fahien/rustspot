@@ -20,7 +20,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     // Load gltf
     let file_path = matches.value_of("file").unwrap();
     let mut model = Model::builder(file_path)?.build()?;
-    let gltf_node = Handle::new(1);
+    let gltf_node = Handle::new(0);
     let mut terrain = Terrain::new(&mut model);
     terrain.set_scale(&mut model, 64.0);
     create_light(&mut model);
@@ -46,10 +46,13 @@ fn main() -> Result<(), Box<dyn Error>> {
     let mut override_shader = spot.gfx.renderer.override_shader.clone();
     let mut occlusion_variant = PbrOcclusionVariant::Default;
     let mut metallic_roughness_variant = PbrMetallicRoughnessVariant::Default;
+    let mut normal_variant = PbrNormalVariant::Default;
     let mut shadow_variant = PbrShadowVariant::Texture;
 
     'gameloop: loop {
         spot.gfx.renderer.override_shader = override_shader.clone();
+
+        let delta = spot.update();
 
         // Handle SDL2 events
         for event in spot.events.poll_iter() {
@@ -71,8 +74,9 @@ fn main() -> Result<(), Box<dyn Error>> {
                     mousestate,
                     ..
                 } => {
-                    if mousestate.is_mouse_button_pressed(sdl2::mouse::MouseButton::Left) {
-                        let node = model.nodes.get_mut(gltf_node).unwrap();
+                    let node = model.nodes.get_mut(gltf_node).unwrap();
+
+                    if mousestate.is_mouse_button_pressed(sdl2::mouse::MouseButton::Right) {
                         let right = na::Unit::new_normalize(node.trs.get_right());
                         let y_rotation = na::UnitQuaternion::from_axis_angle(
                             &right,
@@ -85,6 +89,10 @@ fn main() -> Result<(), Box<dyn Error>> {
                             4.0 * xrel as f32 / extent.width as f32,
                         );
                         node.trs.rotate(&z_rotation);
+                    } else if mousestate.is_mouse_button_pressed(sdl2::mouse::MouseButton::Middle) {
+                        let x = delta.as_secs_f32() * 0.25 * xrel as f32;
+                        let y = delta.as_secs_f32() * 0.25 * -yrel as f32;
+                        node.trs.translate(x, y, 0.0);
                     }
                 }
                 sdl2::event::Event::MouseWheel { y, .. } => {
@@ -117,8 +125,6 @@ fn main() -> Result<(), Box<dyn Error>> {
                 _ => println!("{:?}", event),
             }
         }
-
-        let _delta = spot.update();
 
         spot.gfx
             .renderer
@@ -191,6 +197,20 @@ fn main() -> Result<(), Box<dyn Error>> {
                 }
 
                 ui.separator();
+                let option = "Normal";
+                ui.text(option);
+                let mut selected_variant = normal_variant;
+                for variant in PbrNormalVariant::all() {
+                    if ui.radio_button(
+                        &imgui::im_str!("{}::{}", option, variant.as_str()),
+                        &mut selected_variant,
+                        variant,
+                    ) {
+                        normal_variant = selected_variant;
+                    }
+                }
+
+                ui.separator();
                 let option = "Shadow";
                 ui.text(option);
                 let mut selected_variant = shadow_variant;
@@ -206,7 +226,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 
                 override_shader.replace(
                     PBR_VARIANTS[occlusion_variant as usize][metallic_roughness_variant as usize]
-                        [shadow_variant as usize],
+                        [normal_variant as usize][shadow_variant as usize],
                 );
             });
 
@@ -247,7 +267,7 @@ fn create_light(model: &mut Model) {
         &na::Vector3::x_axis(),
         -(0.2 + std::f32::consts::FRAC_PI_4 + std::f32::consts::FRAC_PI_8),
     ));
-    light_node.trs.translate(2.0, 40.0, 16.0);
+    light_node.trs.translate(2.0, 3.0, 1.0);
 
     let light_node = model.nodes.push(light_node);
     model
@@ -270,7 +290,7 @@ fn create_camera(model: &mut Model) -> (Handle<Camera>, Handle<Node>) {
     //     &na::Vector3::x_axis(),
     //     -(0.2 + std::f32::consts::FRAC_PI_4 + std::f32::consts::FRAC_PI_8),
     // ));
-    camera_node.trs.translate(0.0, 0.0, 0.0);
+    camera_node.trs.translate(0.0, 0.5, 0.0);
     let node = model.nodes.push(camera_node);
 
     (camera, node)
