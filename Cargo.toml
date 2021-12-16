@@ -19,6 +19,7 @@ imgui = "0.5.0"
 sdl2 = "0.34.3"
 noise = "0.7.0"
 rayon = "1.5.1"
+gltf = "0.16.0"
 
 # Keep lib and bin at the end for the CI script
 [lib]
@@ -65,3 +66,6 @@ path = "src/demo/9-skybox.rs"
 name = "10-grass"
 path = "src/demo/10-grass.rs"
 
+[[bin]]
+name = "11-gltf"
+path = "src/demo/11-gltf.rs"

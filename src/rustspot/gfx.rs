@@ -1,4 +1,3 @@
-use std::collections::HashMap;
 use std::fs::File;
 use std::path::Path;
 
@@ -382,34 +381,6 @@ impl Trs {
             .rotation
             .transform_vector(&-na::Vector3::z())
             .normalize()
-    }
-}
-
-pub struct Model {
-    pub colors: HashMap<Color, Texture>,
-    pub textures: Pack<Texture>,
-    pub materials: Pack<Material>,
-    pub primitives: Pack<Primitive>,
-    pub meshes: Pack<Mesh>,
-    pub nodes: Pack<Node>,
-    pub directional_lights: Pack<DirectionalLight>,
-    pub point_lights: Pack<PointLight>,
-    pub cameras: Pack<Camera>,
-}
-
-impl Model {
-    pub fn new() -> Self {
-        Self {
-            colors: HashMap::new(),
-            textures: Pack::new(),
-            materials: Pack::new(),
-            primitives: Pack::new(),
-            meshes: Pack::new(),
-            nodes: Pack::new(),
-            directional_lights: Pack::new(),
-            point_lights: Pack::new(),
-            cameras: Pack::new(),
-        }
     }
 }
 

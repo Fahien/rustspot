@@ -36,6 +36,9 @@ pub use node::*;
 pub mod input;
 pub use input::*;
 
+pub mod model;
+pub use model::*;
+
 pub mod gfx;
 pub use gfx::*;
 
