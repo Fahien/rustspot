@@ -20,7 +20,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     // Load gltf
     let file_path = matches.value_of("file").unwrap();
     let mut model = Model::builder(file_path)?.build()?;
-    let gltf_node = Handle::new(0);
+    let gltf_node = Handle::new(2);
     let mut terrain = Terrain::new(&mut model);
     terrain.set_scale(&mut model, 64.0);
     create_light(&mut model);
@@ -77,28 +77,19 @@ fn main() -> Result<(), Box<dyn Error>> {
                     let node = model.nodes.get_mut(gltf_node).unwrap();
 
                     if mousestate.is_mouse_button_pressed(sdl2::mouse::MouseButton::Right) {
-                        let right = na::Unit::new_normalize(node.trs.get_right());
-                        let y_rotation = na::UnitQuaternion::from_axis_angle(
-                            &right,
-                            4.0 * yrel as f32 / extent.height as f32,
-                        );
-                        node.trs.rotate(&y_rotation);
-
-                        let z_rotation = na::UnitQuaternion::from_axis_angle(
-                            &na::Vector3::y_axis(),
-                            4.0 * xrel as f32 / extent.width as f32,
-                        );
-                        node.trs.rotate(&z_rotation);
+                        rotate_node(delta.as_secs_f32(), node, xrel as f32, yrel as f32);
                     } else if mousestate.is_mouse_button_pressed(sdl2::mouse::MouseButton::Middle) {
                         let x = delta.as_secs_f32() * 0.25 * xrel as f32;
                         let y = delta.as_secs_f32() * 0.25 * -yrel as f32;
                         node.trs.translate(x, y, 0.0);
                     }
                 }
-                sdl2::event::Event::MouseWheel { y, .. } => {
+                sdl2::event::Event::MouseWheel { x, y, .. } => {
                     let node = model.nodes.get_mut(camera_node).unwrap();
                     let forward = node.trs.get_forward().scale(0.125 * y as f32);
                     node.trs.translate(forward.x, forward.y, forward.z);
+
+                    rotate_node(delta.as_secs_f32(), node, x as f32, 0.0);
                 }
                 sdl2::event::Event::KeyDown {
                     keycode: Some(sdl2::keyboard::Keycode::Up),
@@ -239,6 +230,15 @@ fn main() -> Result<(), Box<dyn Error>> {
     }
 
     Ok(())
+}
+
+fn rotate_node(delta: f32, node: &mut Node, x: f32, y: f32) {
+    let right = na::Unit::new_normalize(node.trs.get_right());
+    let y_rotation = na::UnitQuaternion::from_axis_angle(&right, 4.0 * y * delta);
+    node.trs.rotate(&y_rotation);
+
+    let z_rotation = na::UnitQuaternion::from_axis_angle(&na::Vector3::y_axis(), 4.0 * x * delta);
+    node.trs.rotate(&z_rotation);
 }
 
 fn print_family(ui: &imgui::Ui, node: &Node, model: &Model, indent: String) {
