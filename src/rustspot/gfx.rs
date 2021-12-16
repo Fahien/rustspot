@@ -59,6 +59,7 @@ impl Color {
 pub struct Texture {
     pub handle: u32,
     pub extent: Extent2D,
+    pub path: Option<String>,
 }
 
 impl Texture {
@@ -68,6 +69,7 @@ impl Texture {
         Texture {
             handle,
             extent: Extent2D::new(0, 0),
+            path: None,
         }
     }
 
@@ -132,7 +134,7 @@ impl Texture {
 
     /// Loads a PNG image from a path and returns a new texture
     pub fn open<P: AsRef<Path>>(path: P) -> Texture {
-        let str_path = path.as_ref().to_str().unwrap();
+        let str_path = path.as_ref().to_str().unwrap().to_string();
         let message = format!("Failed to open: {}", str_path);
         let decoder = png::Decoder::new(File::open(path).expect(&message));
         let (info, mut reader) = decoder.read_info().expect("Failed reading png info");
@@ -142,6 +144,7 @@ impl Texture {
             .expect("Failed to read png frame");
 
         let mut texture = Texture::new();
+        texture.path = Some(str_path);
         texture.upload(info.width, info.height, &data);
         texture
     }
