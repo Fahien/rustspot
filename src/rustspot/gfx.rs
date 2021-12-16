@@ -331,6 +331,11 @@ impl Video {
         Extent2D::new(width, height)
     }
 
+    pub fn get_window_extent(&self) -> Extent2D {
+        let (width, height) = self.window.size();
+        Extent2D::new(width, height)
+    }
+
     fn new(sdl: &sdl2::Sdl, extent: Extent2D) -> Self {
         let system = sdl.video().expect("Failed initializing video");
 
@@ -443,5 +448,33 @@ impl Gfx {
     pub fn present(&mut self, frame: Frame) {
         self.frame.replace(frame);
         self.video.window.gl_swap_window();
+    }
+
+    pub fn update(&mut self, delta: Duration, input: &Input) {
+        let extent = self.video.get_drawable_extent();
+        let window_extent = self.video.get_window_extent();
+
+        // Update GUI
+        let ui = self.gui.io_mut();
+        ui.update_delta_time(delta);
+
+        // TODO: Should this update be here or somewhere else?
+        // Like a RustSpot GUI wrapper
+        ui.display_size = [extent.width as f32, extent.height as f32];
+        ui.mouse_down = input.mouse_down;
+
+        let scale_x = extent.width as f32 / window_extent.width as f32;
+        let scale_y = extent.height as f32 / window_extent.height as f32;
+
+        ui.mouse_pos[0] = input.mouse_pos[0] * scale_x;
+        ui.mouse_pos[1] = input.mouse_pos[1] * scale_y;
+
+        ui.font_global_scale = scale_y;
+
+        // Sync framebuffer extent value we store as well
+        let frame = self.get_frame_mut();
+        frame.default_framebuffer.framebuffer.extent = extent;
+
+        self.renderer.delta += delta.as_secs_f32();
     }
 }

@@ -191,22 +191,7 @@ impl Spot {
 
     pub fn update(&mut self) -> Duration {
         let delta = self.timer.get_delta();
-
-        // Update GUI
-        let ui = self.gfx.gui.io_mut();
-        ui.update_delta_time(delta);
-        // TODO Should this update be here or somewhere else? Like a RustSpot GUI wrapper
-        let extent = self.gfx.video.get_drawable_extent();
-        ui.display_size = [extent.width as f32, extent.height as f32];
-        ui.mouse_down = self.input.mouse_down;
-        ui.mouse_pos = self.input.mouse_pos;
-
-        // Sync framebuffer extent value we store as well
-        let frame = self.gfx.get_frame_mut();
-        frame.default_framebuffer.framebuffer.extent = extent;
-
-        self.gfx.renderer.delta += delta.as_secs_f32();
-
+        self.gfx.update(delta, &self.input);
         delta
     }
 }
