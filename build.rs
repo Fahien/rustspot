@@ -397,7 +397,7 @@ impl CustomShader for {}Shader {{
                 gl::DrawElements(
                     gl::TRIANGLES,
                     primitive.indices.len() as _,
-                    gl::UNSIGNED_INT,
+                    gl::UNSIGNED_SHORT,
                     0 as _,
                 );
             }
@@ -418,7 +418,7 @@ impl CustomShader for {}Shader {{
                     gl::DrawElementsInstanced(
                         gl::TRIANGLES,
                         primitive.indices.len() as _,
-                        gl::UNSIGNED_INT,
+                        gl::UNSIGNED_SHORT,
                         0 as _,
                         batch_count as _,
                     );
@@ -432,13 +432,23 @@ impl CustomShader for {}Shader {{
         generated_code.push_str(
             r#"
     fn draw(&self, node: &Node, primitive: &Primitive) {
-        unsafe {
-            gl::DrawElements(
-                gl::TRIANGLES,
-                primitive.indices.len() as _,
-                gl::UNSIGNED_INT,
-                0 as _,
-            );
+        if primitive.indices.len() == 0 {
+            unsafe {
+                gl::DrawArrays(
+                    gl::TRIANGLES,
+                    0,
+                    primitive.vertices.len() as _,
+                )
+            }
+        } else {
+            unsafe {
+                gl::DrawElements(
+                    gl::TRIANGLES,
+                    primitive.indices.len() as _,
+                    gl::UNSIGNED_SHORT,
+                    0 as _,
+                );
+            }
         }
     }
 }

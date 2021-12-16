@@ -297,7 +297,7 @@ impl Primitive {
             gl::DrawElements(
                 gl::TRIANGLES,
                 self.indices.len() as _,
-                gl::UNSIGNED_INT,
+                gl::UNSIGNED_SHORT,
                 0 as _,
             );
         }
