@@ -27,11 +27,15 @@ fn main() {
             na::UnitQuaternion::from_axis_angle(&na::Vector3::y_axis(), delta.as_secs_f32() / 2.0);
         model.nodes.get_mut(root).unwrap().trs.rotate(&rot);
 
+        let frame = spot.gfx.next_frame();
+        spot.gfx
+            .renderer
+            .render_shadow(&model, &frame.shadow_buffer);
+
         spot.gfx
             .renderer
             .draw(&model, root, &na::Matrix4::identity());
 
-        let frame = spot.gfx.next_frame();
         spot.gfx
             .renderer
             .render_geometry(&model, &frame.default_framebuffer);

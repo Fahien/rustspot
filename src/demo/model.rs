@@ -83,7 +83,7 @@ pub fn create_structure_scene(model: &mut Model) -> Handle<Node> {
         .directional_lights
         .push(DirectionalLight::color(1.0, 1.0, 1.0));
     let mut light_node = Node::new();
-    light_node.trs.translate(2.0, 0.0, 8.0);
+    light_node.trs.translate(2.0, 0.0, 4.0);
     light_node.trs.rotate(&na::UnitQuaternion::from_axis_angle(
         &na::Vector3::x_axis(),
         -std::f32::consts::FRAC_PI_4,
@@ -111,7 +111,7 @@ pub fn create_structure_scene(model: &mut Model) -> Handle<Node> {
         .push(Texture::pixel(Color::rgba(160, 170, 180, 255)));
     let material = Material::builder()
         .texture(texture)
-        .shader(Shaders::LightShadow)
+        .shader(Shaders::PbrOcclusionDefaultMetallicRoughnessDefaultNormalDefaultShadowTexture)
         .build();
     let material = model.materials.push(material);
     let primitives = vec![model.primitives.push(Primitive::cube(material))];
@@ -130,7 +130,7 @@ pub fn create_structure_scene(model: &mut Model) -> Handle<Node> {
         .push(Texture::pixel(Color::rgba(255, 255, 255, 255)));
     let material = Material::builder()
         .texture(texture)
-        .shader(Shaders::LightShadow)
+        .shader(Shaders::PbrOcclusionDefaultMetallicRoughnessDefaultNormalDefaultShadowTexture)
         .build();
     let material = model.materials.push(material);
     let primitives = vec![model.primitives.push(Primitive::cube(material))];

@@ -81,7 +81,7 @@ impl Renderer {
             "res/shader/read-color-ms.frag.glsl",
         );
 
-        let screen_camera = Camera::orthographic(1, 1);
+        let screen_camera = Camera::orthographic(1, 1, 0.1, 100.0);
         let mut screen_node = Node::new();
         screen_node.trs.translate(0.0, 0.0, 1.0);
 
@@ -234,10 +234,7 @@ impl Renderer {
         if let Some(light_node) = model.nodes.get(self.directional_light) {
             // Bind directional light as camera view
             // Create orthographic camera but how big?
-            let camera = Camera::orthographic(
-                framebuffer.virtual_extent.width / 16,
-                framebuffer.virtual_extent.height / 16,
-            );
+            let camera = Camera::orthographic(8, 8, 1.0, 8.0);
             draw_shadow_program.bind_camera(&camera, &light_node);
             // Keep track for next pass
             self.light_space = camera.proj * light_node.trs.get_view();

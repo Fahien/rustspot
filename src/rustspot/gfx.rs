@@ -161,14 +161,14 @@ pub struct Camera {
 }
 
 impl Camera {
-    pub fn orthographic(width: u32, height: u32) -> Camera {
+    pub fn orthographic(width: u32, height: u32, near: f32, far: f32) -> Camera {
         let proj = na::Orthographic3::new(
             -(width as f32) / 2.0,
             width as f32 / 2.0,
             -(height as f32) / 2.0,
             (height as f32) / 2.0,
-            0.1,
-            100.0,
+            near,
+            far,
         );
         Camera {
             proj: proj.to_homogeneous(),

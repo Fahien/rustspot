@@ -246,7 +246,7 @@ impl Texture {
             .extent(extent)
             .samples(samples)
             .format(gl::DEPTH_COMPONENT)
-            .component(gl::UNSIGNED_SHORT)
+            .component(gl::FLOAT)
             .build()
             .unwrap()
     }
